@@ -9,7 +9,7 @@ const notoSansTC = Noto_Sans_TC({
 
 const notoSerifTC = Noto_Serif_TC({
   variable: "--font-noto-serif-tc",
-  weight: ["700"],
+  weight: ["600", "700"],
   subsets: ["latin"],
 });
 
