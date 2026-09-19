@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { TripDetail } from "@/components/trip-detail/types";
+import Dropdown from "@/components/ui/Dropdown";
 
 const TIME_SLOTS = ["上午（09:00-12:00）", "下午（13:00-17:00）", "晚上（18:00-20:00）"];
 
@@ -36,6 +37,7 @@ function LightbulbIcon() {
 export default function ContactForm({ trip }: { trip: TripDetail | null }) {
   const [agreed, setAgreed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [preferredTime, setPreferredTime] = useState("");
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -124,20 +126,13 @@ export default function ContactForm({ trip }: { trip: TripDetail | null }) {
               <TextInput name="company" placeholder="輸入公司行號" />
             </Field>
             <Field label="方便聯絡的時段">
-              <select
+              <Dropdown
                 name="preferredTime"
-                defaultValue=""
-                className="h-12 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-sm text-[#090909] focus:border-[#0053E0] focus:outline-none"
-              >
-                <option value="" disabled>
-                  選擇時段
-                </option>
-                {TIME_SLOTS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
+                placeholder="選擇時段"
+                options={TIME_SLOTS}
+                value={preferredTime}
+                onChange={setPreferredTime}
+              />
             </Field>
           </div>
 

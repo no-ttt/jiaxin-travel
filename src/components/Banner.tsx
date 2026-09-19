@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import Dropdown from "@/components/ui/Dropdown";
 
 const SLIDES = [
   {
@@ -54,7 +55,7 @@ const SERVICE_CONTENT: Record<
     title: "專屬量身打造，不限人數、彈性成行！",
     description: "提供專屬行程規劃服務，由旅遊顧問協助安排交通、住宿與行程。",
     cta: "前往客製包團與需求填寫 →",
-    href: "/contact",
+    href: "/custom-trip",
   },
   flight: {
     icon: "/images/service-flight-icon.png",
@@ -305,31 +306,19 @@ function ServicePanel({
 }
 
 function ThemeDropdownField() {
+  const [category, setCategory] = useState("");
+
   return (
     <div className="flex items-center gap-4">
       <span className="w-24 shrink-0 text-sm font-medium uppercase tracking-wide text-slate-600 sm:w-28">
         關鍵字
       </span>
-      <div className="relative min-w-0 flex-1">
-        <select
-          defaultValue=""
-          className="w-full min-w-0 cursor-pointer appearance-none rounded-[10px] border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm text-slate-700 focus:border-[#0053E0] focus:outline-none"
-        >
-          <option value="" disabled>
-            選擇主題分類
-          </option>
-          {THEME_CATEGORIES.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
-        <Image
-          src="/images/chevron-right-icon.svg"
-          alt=""
-          width={12}
-          height={12}
-          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rotate-90"
+      <div className="min-w-0 flex-1">
+        <Dropdown
+          placeholder="選擇主題分類"
+          options={THEME_CATEGORIES}
+          value={category}
+          onChange={setCategory}
         />
       </div>
     </div>
