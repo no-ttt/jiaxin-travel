@@ -40,6 +40,7 @@ export default function Header({
           aria-label="開啟選單"
           aria-expanded={isSidebarOpen}
           onClick={onToggleSidebar}
+          data-sidebar-toggle
           className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center sm:h-10 sm:w-10"
         >
           <Image src="/images/nav-left-icon.svg" alt="" width={40} height={40} className="h-full w-full" />

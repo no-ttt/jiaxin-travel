@@ -25,7 +25,7 @@ export default function TripDetailPage({ params }: PageProps<"/search/[id]">) {
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
       />
-      <Sidebar isOpen={isSidebarOpen} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <main className="flex-1">
         <div className="mx-auto flex max-w-[940px] flex-col px-4 py-14 sm:px-8 lg:px-0">

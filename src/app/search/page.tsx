@@ -115,7 +115,7 @@ export default function SearchPage() {
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
       />
-      <Sidebar isOpen={isSidebarOpen} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <main className="flex-1">
         <div className="relative bg-gradient-to-r from-[#E5F0FB] via-[#EEF5FC] to-[#F9FBFD] pb-10 pt-6">

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 export type Tour = {
   id: string;
@@ -32,13 +33,13 @@ function TourCard({ tour }: { tour: Tour }) {
             <span className="text-2xl font-semibold text-[#0053E0]">{tour.price}</span>
             <span className="text-[13px] text-[#002366]">元起</span>
           </div>
-          <button
-            type="button"
+          <Link
+            href={`/search/${tour.id}`}
             className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#002366]"
           >
             詳情
-            <Image src="/images/arrow-right-icon.svg" alt="" width={5} height={8} />
-          </button>
+            <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} />
+          </Link>
         </div>
       </div>
     </div>
@@ -80,10 +81,12 @@ export default function TourCarousel({
   eyebrow,
   title,
   tours,
+  moreHref,
 }: {
   eyebrow: string;
   title: string;
   tours: Tour[];
+  moreHref?: string;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);
@@ -134,12 +137,14 @@ export default function TourCarousel({
           </span>
           <h2 className="font-serif text-3xl font-bold text-[#1A1C1E] sm:text-[32px]">{title}</h2>
         </div>
-        <button
-          type="button"
-          className="hidden h-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#E0E3E8] px-[18px] text-sm font-medium text-[#002366] transition hover:bg-slate-50 sm:flex"
-        >
-          查看更多
-        </button>
+        {moreHref && (
+          <Link
+            href={moreHref}
+            className="hidden h-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#E0E3E8] px-[18px] text-sm font-medium text-[#002366] transition hover:bg-slate-50 sm:flex"
+          >
+            查看更多
+          </Link>
+        )}
       </div>
 
       <div className="relative w-full">

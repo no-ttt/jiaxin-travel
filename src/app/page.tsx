@@ -141,7 +141,7 @@ export default function Home() {
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
       />
-      <Sidebar isOpen={isSidebarOpen} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1">
         <Banner />
         <section className="mx-4 my-12 flex flex-col gap-20 sm:mx-8 lg:mx-[120px]">
@@ -151,6 +151,7 @@ export default function Home() {
             eyebrow="Guaranteed Departure"
             title="保證出團"
             tours={GUARANTEED_DEPARTURE_TOURS}
+            moreHref="/guaranteed-departure"
           />
           <TourCarousel
             eyebrow="Premium Selection"

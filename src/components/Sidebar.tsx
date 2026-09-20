@@ -27,7 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "國外團體", overlay: { title: "國外團體", options: OUTBOUND_GROUP_OPTIONS } },
   { label: "主題旅遊", overlay: { title: "主題旅遊", options: THEME_OPTIONS } },
   { label: "客製包團", href: "#" },
-  { label: "美安專區", href: "#" },
+  { label: "美安專區", href: "/meian" },
   { label: "機票", href: "#" },
   { label: "簽證", href: "#" },
   { label: "旅客服務", href: "#" },
@@ -36,10 +36,17 @@ const NAV_ITEMS: NavItem[] = [
 
 const CLOSE_DELAY_MS = 200;
 
-export default function Sidebar({ isOpen }: { isOpen: boolean }) {
+export default function Sidebar({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose?: () => void;
+}) {
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
   const [expandedLabel, setExpandedLabel] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     return () => {
@@ -53,6 +60,20 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
       setExpandedLabel(null);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (navRef.current?.contains(target)) return;
+      if ((target as HTMLElement).closest?.("[data-sidebar-toggle]")) return;
+      onClose();
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, onClose]);
 
   const cancelClose = () => {
     if (closeTimerRef.current) {
@@ -70,6 +91,7 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
 
   return (
     <nav
+      ref={navRef}
       aria-hidden={!isOpen}
       className={`fixed left-0 top-[var(--header-height)] z-40 flex max-h-[calc(100vh-var(--header-height))] w-[85vw] max-w-[280px] flex-col gap-1 overflow-y-auto border border-l-0 border-slate-200 bg-white p-3 shadow-[0px_2px_10px_0px_rgba(0,0,0,0.04),0px_10px_24px_-10px_rgba(0,0,0,0.03)] transition-transform duration-300 md:max-h-none md:w-[280px] md:overflow-visible ${
         isOpen ? "translate-x-0" : "-translate-x-full"
@@ -78,7 +100,7 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
       {NAV_ITEMS.map((item) => {
         const isHovered = hoveredLabel === item.label;
         const isExpanded = expandedLabel === item.label;
-        const isActive = (isHovered || isExpanded) && item.overlay;
+        const isActive = isHovered || isExpanded;
 
         return (
           <div
@@ -97,13 +119,16 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
                 event.preventDefault();
                 setExpandedLabel((current) => (current === item.label ? null : item.label));
               }}
-              className={`flex h-20 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-base font-medium transition-colors ${
-                isActive
-                  ? "border-[#0053E0] bg-[#ECF1FA] text-[#090909]"
-                  : "border-transparent text-slate-500 hover:border-slate-200 hover:bg-slate-50"
+              className={`flex h-20 cursor-pointer items-stretch gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                isActive ? "bg-[#ECF1FA] text-[#090909]" : "text-slate-500 hover:bg-slate-50"
               }`}
             >
-              {item.label}
+              <span
+                className={`w-1 shrink-0 self-stretch rounded-[20px] bg-[#0053E0] transition-opacity ${
+                  isActive ? "opacity-100" : "opacity-0"
+                }`}
+              />
+              <span className="flex items-center">{item.label}</span>
             </a>
 
             {item.overlay && (

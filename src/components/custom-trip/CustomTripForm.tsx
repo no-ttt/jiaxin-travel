@@ -156,7 +156,17 @@ function CompanionCheckbox({
   );
 }
 
-export default function CustomTripForm() {
+export default function CustomTripForm({
+  eyebrow = "BUILD YOUR JOURNEY",
+  title = "客製包團需求單",
+  description = "請填寫以下資訊，我們將在 24 小時內與您聯繫。",
+  showHeading = true,
+}: {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  showHeading?: boolean;
+} = {}) {
   const [companionNeeds, setCompanionNeeds] = useState<Set<string>>(new Set());
   const [includesFlight, setIncludesFlight] = useState<"with" | "without">("with");
   const [agreed, setAgreed] = useState(false);
@@ -185,17 +195,17 @@ export default function CustomTripForm() {
       id="custom-trip-form"
       className="flex scroll-mt-24 flex-col items-stretch gap-7 px-4 pb-14 pt-8 sm:px-8 lg:px-[160px] lg:pb-[72px] lg:pt-10"
     >
-      <div className="flex w-full flex-col gap-2">
-        <span className="text-xs font-semibold tracking-[0.1833em] text-[#0053E0]">
-          BUILD YOUR JOURNEY
-        </span>
-        <h2 className="font-serif text-[28px] font-bold text-[#090909] sm:text-[34px]">
-          客製包團需求單
-        </h2>
-        <p className="text-sm leading-[1.6] text-[#535F71]">
-          請填寫以下資訊，我們將在 24 小時內與您聯繫。
-        </p>
-      </div>
+      {showHeading && (
+        <div className="flex w-full flex-col gap-2">
+          <span className="text-xs font-semibold tracking-[0.1833em] text-[#0053E0]">
+            {eyebrow}
+          </span>
+          <h2 className="font-serif text-[28px] font-bold text-[#090909] sm:text-[34px]">
+            {title}
+          </h2>
+          <p className="text-sm leading-[1.6] text-[#535F71]">{description}</p>
+        </div>
+      )}
 
       <div className="w-full rounded-[28px] bg-white shadow-[0px_18px_46px_0px_rgba(20,41,71,0.12)]">
         <form onSubmit={handleSubmit} className="flex flex-col items-stretch gap-0 px-6 py-2 sm:px-8">

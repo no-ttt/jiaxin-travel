@@ -34,7 +34,7 @@ export default function TripResultCard({ trip }: { trip: TripResult }) {
             className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#002366]"
           >
             查看行程
-            <Image src="/images/arrow-right-icon.svg" alt="" width={5} height={8} />
+            <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} />
           </Link>
         </div>
       </div>
