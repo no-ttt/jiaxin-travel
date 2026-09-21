@@ -14,7 +14,7 @@ export default function MeianInquirySection() {
         aria-expanded={isOpen}
         className="flex w-full cursor-pointer items-center gap-4 px-6 py-6 sm:px-[160px]"
       >
-        <div className="flex flex-1 flex-col items-center gap-2 text-center">
+        <div className="flex flex-1 flex-col gap-2 text-left">
           <span className="text-xs font-semibold tracking-[0.1833em] text-[#0053E0]">
             EXCLUSIVE TRIP INQUIRY
           </span>
