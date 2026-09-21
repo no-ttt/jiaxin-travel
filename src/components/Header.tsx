@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-const NAV_ITEMS = [{ label: "關於我們", href: "#about" }];
+const NAV_ITEMS = [{ label: "關於我們", href: "/about" }];
 
 export default function Header({
   isSidebarOpen,
