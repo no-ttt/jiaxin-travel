@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
+type OverlayOption = string | { label: string; href: string };
+
 type NavItem = {
   label: string;
   href?: string;
-  overlay?: { title: string; options: string[] };
+  overlay?: { title: string; options: OverlayOption[] };
 };
 
 const OUTBOUND_GROUP_OPTIONS = [
@@ -17,8 +19,9 @@ const OUTBOUND_GROUP_OPTIONS = [
   "東歐/巴爾幹半島", "南/北歐",
 ];
 
-const THEME_OPTIONS = [
-  "賽車", "郵輪", "鐵道", "山林",
+const THEME_OPTIONS: OverlayOption[] = [
+  { label: "賽車", href: "/theme/racing" },
+  "郵輪", "鐵道", "山林",
   "滑雪", "馬拉松", "單車", "登山健行",
   "高爾夫",
 ];
@@ -138,15 +141,19 @@ export default function Sidebar({
                   <div className="absolute left-full top-0 z-20 ml-6 hidden w-max rounded-[18px] border border-slate-200 bg-white p-8 shadow-[0px_12px_34px_-6px_rgba(5,18,36,0.12)] md:block">
                     <h3 className="mb-6 text-xl font-bold text-[#090909]">{item.overlay.title}</h3>
                     <div className="grid grid-cols-4 gap-x-16 gap-y-6">
-                      {item.overlay.options.map((option) => (
-                        <a
-                          key={option}
-                          href="#"
-                          className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-base text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-slate-50 hover:text-[#0053E0]"
-                        >
-                          {option}
-                        </a>
-                      ))}
+                      {item.overlay.options.map((option) => {
+                        const label = typeof option === "string" ? option : option.label;
+                        const href = typeof option === "string" ? "#" : option.href;
+                        return (
+                          <a
+                            key={label}
+                            href={href}
+                            className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-base text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-slate-50 hover:text-[#0053E0]"
+                          >
+                            {label}
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -154,15 +161,19 @@ export default function Sidebar({
                 {/* Mobile: inline accordion */}
                 {isExpanded && (
                   <div className="mb-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 md:hidden">
-                    {item.overlay.options.map((option) => (
-                      <a
-                        key={option}
-                        href="#"
-                        className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-sm text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-white hover:text-[#0053E0]"
-                      >
-                        {option}
-                      </a>
-                    ))}
+                    {item.overlay.options.map((option) => {
+                      const label = typeof option === "string" ? option : option.label;
+                      const href = typeof option === "string" ? "#" : option.href;
+                      return (
+                        <a
+                          key={label}
+                          href={href}
+                          className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-sm text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-white hover:text-[#0053E0]"
+                        >
+                          {label}
+                        </a>
+                      );
+                    })}
                   </div>
                 )}
               </>
