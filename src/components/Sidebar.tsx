@@ -31,7 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "機票", href: "#" },
   { label: "簽證", href: "#" },
   { label: "旅客服務", href: "#" },
-  { label: "旅程分享", href: "#" },
+  { label: "旅程分享", href: "/journey-share" },
 ];
 
 const CLOSE_DELAY_MS = 200;
