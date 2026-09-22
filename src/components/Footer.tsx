@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 const SOCIAL_LINKS = [
   { id: "facebook", icon: "/images/footer-social-1.svg", label: "Facebook" },
@@ -17,8 +18,8 @@ const CONTACT_INFO = [
 ];
 
 const UTILITY_LINKS = [
-  { id: "remittance", label: "匯款資訊" },
-  { id: "terms", label: "旅客須知及服務條款" },
+  { id: "remittance", label: "匯款資訊", href: "/terms" },
+  { id: "terms", label: "旅客須知及服務條款", href: "/terms" },
 ];
 
 export default function Footer() {
@@ -91,9 +92,9 @@ export default function Footer() {
           {UTILITY_LINKS.map((link, i) => (
             <span key={link.id} className="flex items-center gap-5">
               {i > 0 && <span className="h-3.5 w-px bg-[#C7CFD9]" />}
-              <a href="#" className="cursor-pointer text-sm font-medium text-[#0053E0]">
+              <Link href={link.href} className="cursor-pointer text-sm font-medium text-[#0053E0]">
                 {link.label}
-              </a>
+              </Link>
             </span>
           ))}
           <span className="h-3.5 w-px bg-[#C7CFD9]" />
