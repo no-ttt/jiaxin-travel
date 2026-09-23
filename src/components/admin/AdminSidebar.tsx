@@ -10,10 +10,21 @@ export default function AdminSidebar() {
 
   return (
     <aside className="sticky top-0 flex h-screen w-[268px] shrink-0 flex-col gap-7 overflow-y-auto border-r border-[#E0E3E8] bg-[#F6F6F6] px-8 py-[30px]">
-      <div className="flex flex-col gap-[3px]">
-        <h1 className="text-[17px] font-medium leading-[1.45em] text-[#002366]">
-          嘉新旅遊 控制台
-        </h1>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1">
+          <span className="relative h-10 w-[57px] shrink-0">
+            <Image src="/images/logo-mark.png" alt="" fill className="object-contain" priority />
+          </span>
+          <span className="relative h-8 w-20 shrink-0">
+            <Image
+              src="/images/logo-text.png"
+              alt="嘉新旅行社 Chia Hsin Travel"
+              fill
+              className="object-contain"
+              priority
+            />
+          </span>
+        </div>
         <p className="text-xs font-normal leading-[1.3em] tracking-[0.1em] text-[#535F71]">
           Management Dashboard
         </p>
