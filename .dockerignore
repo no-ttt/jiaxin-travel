@@ -1,0 +1,8 @@
+# 後端管線以 deploy/frontend/Dockerfile 建置本專案時的建置內容排除清單
+node_modules
+.next
+out
+.git
+.github
+*.md
+.env*
