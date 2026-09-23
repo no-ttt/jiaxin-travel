@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AdminInfoNote from "../ui/AdminInfoNote";
 import AdminSectionCard from "../ui/AdminSectionCard";
 import AdminTextInput from "../ui/AdminTextInput";
 import Dropdown from "@/components/ui/Dropdown";
@@ -162,11 +163,9 @@ export default function CategorySection({
         </button>
       </div>
 
-      <div className="flex items-center gap-2 rounded-[10px] bg-[#FAFAFA] px-3.5 py-2.5">
-        <p className="text-[12.5px] leading-[1.45em] text-[#535F71]">
-          僅「顯示」開啟的分類會出現在首頁；每個分類最多建議放 3～6 個行程，超過將以輪播方式呈現。
-        </p>
-      </div>
+      <AdminInfoNote>
+        僅「顯示」開啟的分類會出現在首頁；每個分類最多建議放 3～6 個行程，超過將以輪播方式呈現。
+      </AdminInfoNote>
     </AdminSectionCard>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AdminInfoNote from "../ui/AdminInfoNote";
 import AdminSectionCard from "../ui/AdminSectionCard";
 import { useDirtyTracking } from "../ui/useDirtyTracking";
 import { INITIAL_HOMEPAGE_SEARCH_KEYWORDS } from "./data";
@@ -118,11 +119,9 @@ export default function SearchKeywordsSection({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 rounded-[10px] bg-[#FAFAFA] px-3.5 py-2.5">
-        <p className="text-[12.5px] leading-[1.45em] text-[#535F71]">
-          每個關鍵字對應前台的一個快速搜尋標籤，使用者點擊後將直接前往該關鍵字的行程搜尋結果頁（無需另外設定連結網址）；拖曳排序可調整顯示順序，關閉後該關鍵字將不再顯示於首頁。
-        </p>
-      </div>
+      <AdminInfoNote>
+        每個關鍵字對應前台的一個快速搜尋標籤，使用者點擊後將直接前往該關鍵字的行程搜尋結果頁（無需另外設定連結網址）；拖曳排序可調整顯示順序，關閉後該關鍵字將不再顯示於首頁。
+      </AdminInfoNote>
     </AdminSectionCard>
   );
 }

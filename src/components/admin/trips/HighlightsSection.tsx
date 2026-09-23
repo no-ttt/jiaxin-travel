@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AdminInfoNote from "@/components/admin/ui/AdminInfoNote";
 import { generateId } from "@/components/admin/ui/generateId";
 import RichTextEditor from "./RichTextEditor";
 
@@ -162,11 +163,7 @@ export default function HighlightsSection({ title, description }: { title: strin
         </p>
       </div>
 
-      <div className="flex items-center gap-2 rounded-[10px] bg-[#FAFAFA] px-3.5 py-2.5">
-        <p className="text-[12.5px] leading-[1.45em] text-[#535F71]">
-          前台呈現規則：1 張圖片顯示為單圖；2 張以上自動切換為輪播。圖片註解會顯示於圖片下方。
-        </p>
-      </div>
+      <AdminInfoNote>前台呈現規則：1 張圖片顯示為單圖；2 張以上自動切換為輪播。圖片註解會顯示於圖片下方。</AdminInfoNote>
 
       <div className="flex flex-col gap-4">
         {cards.map((card, index) => {
