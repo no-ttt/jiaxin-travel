@@ -1,5 +1,5 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import OrderFlowEditor from "@/components/admin/order-flow/OrderFlowEditor";
 
 export default function AdminOrderFlowPage() {
-  return <AdminPlaceholder title="訂購流程編輯" />;
+  return <OrderFlowEditor />;
 }
