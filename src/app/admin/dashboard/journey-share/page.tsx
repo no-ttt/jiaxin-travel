@@ -1,5 +1,5 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import JourneyShareEditor from "@/components/admin/journey-share/JourneyShareEditor";
 
 export default function AdminJourneySharePage() {
-  return <AdminPlaceholder title="旅程分享編輯" />;
+  return <JourneyShareEditor />;
 }
