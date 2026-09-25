@@ -1,5 +1,5 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import ContractEditor from "@/components/admin/contract/ContractEditor";
 
 export default function AdminContractPage() {
-  return <AdminPlaceholder title="旅遊契約書編輯" />;
+  return <ContractEditor />;
 }
