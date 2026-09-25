@@ -171,7 +171,7 @@ export default function TripsTable() {
   };
 
   return (
-    <div className="flex w-full max-w-[1012px] flex-col gap-5">
+    <div className="flex w-full flex-col gap-5">
       {/* Filter Bar */}
       <div className="flex w-full flex-col gap-4 rounded-2xl border border-[#E0E3E8] bg-white p-4">
         <div className="flex w-full flex-wrap items-center gap-2.5">
@@ -322,7 +322,7 @@ export default function TripsTable() {
               {allSelected ? "✓" : ""}
             </button>
           </div>
-          <div className="flex w-[360px] items-center">
+          <div className="flex min-w-[200px] flex-1 items-center">
             <span className="text-[12px] font-bold leading-[1.45em] text-[#535F71]">行程名稱</span>
           </div>
           <div className="flex w-[74px] items-center">
@@ -427,8 +427,8 @@ export default function TripsTable() {
                   {checked ? "✓" : ""}
                 </button>
               </div>
-              <div className="flex w-[360px] items-center">
-                <span className="text-sm font-medium leading-[1.45em] text-[#002366]">
+              <div className="flex min-w-[200px] flex-1 items-center">
+                <span className="truncate text-sm font-medium leading-[1.45em] text-[#002366]">
                   {trip.name}
                 </span>
               </div>

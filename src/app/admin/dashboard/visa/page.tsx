@@ -1,5 +1,5 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import VisaServiceEditor from "@/components/admin/visa/VisaServiceEditor";
 
 export default function AdminVisaPage() {
-  return <AdminPlaceholder title="簽證代辦服務編輯" />;
+  return <VisaServiceEditor />;
 }
