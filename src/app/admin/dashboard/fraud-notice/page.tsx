@@ -1,5 +1,5 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import FraudNoticeEditor from "@/components/admin/fraud-notice/FraudNoticeEditor";
 
 export default function AdminFraudNoticePage() {
-  return <AdminPlaceholder title="防詐騙提醒說明" />;
+  return <FraudNoticeEditor />;
 }
