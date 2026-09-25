@@ -1,5 +1,5 @@
-import AdminPlaceholder from "@/components/admin/AdminPlaceholder";
+import FooterEditor from "@/components/admin/footer/FooterEditor";
 
 export default function AdminFooterPage() {
-  return <AdminPlaceholder title="網站頁尾設定" />;
+  return <FooterEditor />;
 }
