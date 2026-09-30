@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 :root {
+  /* 由 layout.tsx 的 Google Fonts <link> 載入；後面接系統字型當備援 */
+  --font-noto-sans-tc: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-noto-serif-tc: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+}
+
+:root {
   --background: #ffffff;
   --foreground: #171717;
   --header-height: 76px;
