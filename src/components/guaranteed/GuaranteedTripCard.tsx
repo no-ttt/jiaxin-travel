@@ -19,7 +19,7 @@ export default function GuaranteedTripCard({ trip }: { trip: GuaranteedTrip }) {
           <span className="text-[13px] text-[#002366]">元起</span>
         </div>
         <Link
-          href={`/search/${trip.id}`}
+          href={`/trips/${trip.id}`}
           className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#002366]"
         >
           詳情

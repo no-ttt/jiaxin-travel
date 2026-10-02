@@ -1,17 +1,53 @@
 "use client";
 
-import { useState } from "react";
-import { generateId } from "@/components/admin/ui/generateId";
+import { useCallback, useState } from "react";
+import AdminToast from "@/components/admin/ui/AdminToast";
+import {
+  useBadgeOptions,
+  useRegions,
+  useThemes,
+  useTripStatusOptions,
+} from "@/lib/api/hooks/useTaxonomy";
+import type { PublishStatus, TripType } from "@/lib/api/types/trip";
 import AdminSelect from "./AdminSelect";
 import AdminDateField from "./AdminDateField";
 import TagMultiSelect from "./TagMultiSelect";
+import {
+  formatAmount,
+  formatPriceFrom,
+  parseAmount,
+  type TripForm,
+  type TripFormChange,
+} from "./form";
 
 type Chip = { id: string; label: string };
 
-const REGION_TAGS = ["日本", "韓國", "中國", "港澳", "東南亞", "紐澳", "歐洲", "美加", "中東非洲"];
+const NO_STATUS = "未設定";
+const BADGE_AUTO = "自動判斷";
+const BADGE_NONE = "不顯示";
+const LISTING_LABELS: Record<PublishStatus, string> = {
+  published: "上架中",
+  unpublished: "下架",
+  draft: "草稿",
+};
+const ZONES: { label: string; key: "in_overseas_group" | "in_theme_travel" | "in_premium" | "in_meian" }[] = [
+  { label: "國外團體", key: "in_overseas_group" },
+  { label: "主題旅遊", key: "in_theme_travel" },
+  { label: "精緻臻品", key: "in_premium" },
+  { label: "美安專區", key: "in_meian" },
+];
+const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
 
-function makeChips(labels: string[]): Chip[] {
-  return labels.map((label) => ({ id: generateId("chip"), label }));
+function toChips(items: { id: number; name: string }[] | undefined): Chip[] {
+  return (items ?? []).map((item) => ({ id: String(item.id), label: item.name }));
+}
+
+function namesToIds(names: string[], items: { id: number; name: string }[] | undefined): number[] {
+  return names.flatMap((name) => items?.find((item) => item.name === name)?.id ?? []);
+}
+
+function idsToNames(ids: number[], items: { id: number; name: string }[] | undefined): string[] {
+  return ids.flatMap((id) => items?.find((item) => item.id === id)?.name ?? []);
 }
 
 function BadgeAddOption({ placeholder, onAdd }: { placeholder: string; onAdd: (label: string) => void }) {
@@ -33,7 +69,7 @@ function BadgeAddOption({ placeholder, onAdd }: { placeholder: string; onAdd: (l
           if (e.key === "Enter") submit();
         }}
         placeholder={placeholder}
-        className="h-[38px] w-[246px] rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-sm leading-[1.5em] text-[#090909] outline-none placeholder:text-[#535F71] focus:border-[#0053E0]"
+        className="h-[38px] w-[246px] rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-sm leading-[1.5em] text-[#090909] outline-none placeholder:text-[#B4BED1] focus:border-[#0053E0]"
       />
       <button
         type="button"
@@ -110,7 +146,7 @@ function ManagedChipList({
             if (e.key === "Enter") submit();
           }}
           placeholder={addPlaceholder}
-          className="h-[38px] w-[246px] rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-sm leading-[1.5em] text-[#090909] outline-none placeholder:text-[#535F71] focus:border-[#0053E0]"
+          className="h-[38px] w-[246px] rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-sm leading-[1.5em] text-[#090909] outline-none placeholder:text-[#B4BED1] focus:border-[#0053E0]"
         />
         <button
           type="button"
@@ -127,56 +163,57 @@ function ManagedChipList({
 export default function BasicInfoSection({
   title,
   description,
-  departDate: departDateProp,
-  onDepartDateChange,
+  value,
+  onChange,
+  onTripTypeChange,
 }: {
   title: string;
   description: string;
-  departDate?: string;
-  onDepartDateChange?: (value: string) => void;
+  value: TripForm;
+  onChange: TripFormChange;
+  /** Trip type is fixed after creation; the editor handles a change by rebuilding the trip. */
+  onTripTypeChange: (type: TripType) => void;
 }) {
-  const [tripType, setTripType] = useState<"custom" | "external">("custom");
-  const [externalUrl, setExternalUrl] = useState("");
-  const [externalAgency, setExternalAgency] = useState("");
-  const [pageTitle, setPageTitle] = useState("追尋極光・遇見冰島 10 日｜藍冰洞探險｜冰河湖｜鑽石沙灘");
+  const { data: themes } = useThemes();
+  const { data: regions } = useRegions();
+  const { data: statuses } = useTripStatusOptions();
+  const { data: badges } = useBadgeOptions();
+  const themeOptions = toChips(themes);
+  const statusOptions = toChips(statuses);
+  const badgeOptions = toChips(badges);
+  const regionTags = (regions ?? []).map((region) => region.name);
 
-  const [themeOptions, setThemeOptions] = useState<Chip[]>(makeChips(["賽車主題", "郵輪", "親子"]));
-  const [selectedThemes, setSelectedThemes] = useState<string[]>(["賽車主題", "郵輪"]);
+  // Managing the option lists themselves (taxonomy create/delete) is not wired up yet.
+  const [notice, setNotice] = useState<string | null>(null);
+  const closeNotice = useCallback(() => setNotice(null), []);
+  const notWired = () => setNotice("選項管理尚未串接，請先使用既有選項");
 
-  const [selectedRegions, setSelectedRegions] = useState<string[]>(["日本", "關西"]);
+  const tripType = value.tripType === "own" ? "custom" : "external";
 
-  const [statusOptions, setStatusOptions] = useState<Chip[]>(makeChips(["保證出團", "新行程", "即將額滿"]));
-  const [tripStatus, setTripStatus] = useState("保證出團");
-
-  const [badgeOptions, setBadgeOptions] = useState<Chip[]>(makeChips(["限定席次", "人氣推薦"]));
-  const [cardBadge, setCardBadge] = useState("自動判斷");
-
-  const [listingStatus, setListingStatus] = useState("上架中");
-
-  const [zones, setZones] = useState<string[]>(["國外團體"]);
-
-  const [price, setPrice] = useState("NT$ 168,000");
-  const [currency, setCurrency] = useState("元");
-
-  const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-  const [selectedMonths, setSelectedMonths] = useState<string[]>(["1月", "6月", "7月", "8月"]);
-
-  const [departureCity, setDepartureCity] = useState("台北");
-  const [deposit, setDeposit] = useState("NT$ 50,000");
-
-  const [metaBadgeVisible, setMetaBadgeVisible] = useState(true);
-
-  const [departDateState, setDepartDateState] = useState("2027-01-13");
-  const departDate = departDateProp ?? departDateState;
-  const setDepartDate = (value: string) => {
-    setDepartDateState(value);
-    onDepartDateChange?.(value);
+  const tripStatus = statuses?.find((option) => option.id === value.status_id)?.name ?? NO_STATUS;
+  const cardBadge =
+    value.badge_mode === "none"
+      ? BADGE_NONE
+      : value.badge_mode === "custom"
+        ? (badges?.find((option) => option.id === value.badge_id)?.name ?? BADGE_AUTO)
+        : BADGE_AUTO;
+  const setCardBadge = (label: string) => {
+    if (label === BADGE_AUTO) onChange({ badge_mode: "auto", badge_id: null });
+    else if (label === BADGE_NONE) onChange({ badge_mode: "none", badge_id: null });
+    else onChange({ badge_mode: "custom", badge_id: badges?.find((b) => b.name === label)?.id ?? null });
   };
-  const [returnDate, setReturnDate] = useState("2027-01-22");
 
-  const toggleInArray = (value: string, arr: string[], setArr: (v: string[]) => void) => {
-    setArr(arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]);
+  const selectedMonths = value.departure_months.map((month) => `${month}月`);
+  const toggleMonth = (label: string) => {
+    const month = Number(label.replace("月", ""));
+    const months = value.departure_months.includes(month)
+      ? value.departure_months.filter((m) => m !== month)
+      : [...value.departure_months, month].sort((a, b) => a - b);
+    onChange({ departure_months: months });
   };
+
+  const departDate = value.base_departure_date ?? "";
+  const returnDate = value.base_return_date ?? "";
 
   const generatedDaysSummary = (() => {
     const start = new Date(departDate);
@@ -212,7 +249,7 @@ export default function BasicInfoSection({
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setTripType("custom")}
+              onClick={() => tripType !== "custom" && onTripTypeChange("own")}
               className={`flex cursor-pointer items-center rounded-[10px] px-5 py-2.5 text-sm font-bold leading-[1.45em] transition ${
                 tripType === "custom"
                   ? "bg-[#0053E0] text-white"
@@ -223,7 +260,7 @@ export default function BasicInfoSection({
             </button>
             <button
               type="button"
-              onClick={() => setTripType("external")}
+              onClick={() => tripType !== "external" && onTripTypeChange("external")}
               className={`flex cursor-pointer items-center rounded-[10px] px-5 py-2.5 text-sm font-bold leading-[1.45em] transition ${
                 tripType === "external"
                   ? "bg-[#0053E0] text-white"
@@ -255,20 +292,20 @@ export default function BasicInfoSection({
                 </div>
                 <input
                   type="text"
-                  value={externalUrl}
-                  onChange={(e) => setExternalUrl(e.target.value)}
+                  value={value.external_url}
+                  onChange={(e) => onChange({ external_url: e.target.value })}
                   placeholder="https://partner-agency.example.com/trip/12345"
-                  className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none placeholder:text-[#535F71] focus:border-[#0053E0]"
+                  className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none placeholder:text-[#B4BED1] focus:border-[#0053E0]"
                 />
               </div>
               <div className="flex flex-1 flex-col gap-[7px]">
                 <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">來源旅行社</span>
                 <input
                   type="text"
-                  value={externalAgency}
-                  onChange={(e) => setExternalAgency(e.target.value)}
+                  value={value.source_agency}
+                  onChange={(e) => onChange({ source_agency: e.target.value })}
                   placeholder="○○旅行社"
-                  className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none placeholder:text-[#535F71] focus:border-[#0053E0]"
+                  className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none placeholder:text-[#B4BED1] focus:border-[#0053E0]"
                 />
                 <p className="text-xs leading-[1.45em] text-[#535F71]">
                   僅後台使用，不顯示於前台；用於內部統計、批次管理與未來合作關係調整時的批次篩選。
@@ -289,8 +326,8 @@ export default function BasicInfoSection({
         <span className="text-[13px] font-bold leading-[1.45em] text-[#002366]">標題</span>
         <input
           type="text"
-          value={pageTitle}
-          onChange={(e) => setPageTitle(e.target.value)}
+          value={value.seo_title}
+          onChange={(e) => onChange({ seo_title: e.target.value })}
           className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
         />
         <p className="text-xs leading-[1.4em] text-[#535F71]">
@@ -312,17 +349,17 @@ export default function BasicInfoSection({
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">主題標籤</span>
             <TagMultiSelect
               options={themeOptions.map((t) => t.label)}
-              selected={selectedThemes}
-              onChange={setSelectedThemes}
+              selected={idsToNames(value.theme_ids, themes)}
+              onChange={(names) => onChange({ theme_ids: namesToIds(names, themes) })}
               placeholder="選擇主題標籤"
             />
           </div>
           <div className="flex flex-1 flex-col gap-[7px]">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">地區標籤</span>
             <TagMultiSelect
-              options={REGION_TAGS}
-              selected={selectedRegions}
-              onChange={setSelectedRegions}
+              options={regionTags}
+              selected={idsToNames(value.region_ids, regions)}
+              onChange={(names) => onChange({ region_ids: namesToIds(names, regions) })}
               placeholder="選擇地區標籤"
             />
           </div>
@@ -332,15 +369,17 @@ export default function BasicInfoSection({
           <div className="flex flex-1 flex-col gap-[7px]">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">行程狀態</span>
             <AdminSelect
-              options={statusOptions.map((o) => o.label)}
+              options={[NO_STATUS, ...statusOptions.map((o) => o.label)]}
               value={tripStatus}
-              onChange={setTripStatus}
+              onChange={(label) =>
+                onChange({ status_id: statuses?.find((option) => option.name === label)?.id ?? null })
+              }
             />
           </div>
           <div className="flex flex-1 flex-col gap-[7px]">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">卡片 Badge</span>
             <AdminSelect
-              options={["自動判斷", ...badgeOptions.map((o) => o.label), "不顯示"]}
+              options={[BADGE_AUTO, ...badgeOptions.map((o) => o.label), BADGE_NONE]}
               value={cardBadge}
               onChange={setCardBadge}
             />
@@ -348,9 +387,15 @@ export default function BasicInfoSection({
           <div className="flex flex-1 flex-col gap-[7px]">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">上架狀態</span>
             <AdminSelect
-              options={["上架中", "下架", "草稿"]}
-              value={listingStatus}
-              onChange={setListingStatus}
+              options={Object.values(LISTING_LABELS)}
+              value={LISTING_LABELS[value.publish_status]}
+              onChange={(label) =>
+                onChange({
+                  publish_status: (Object.keys(LISTING_LABELS) as PublishStatus[]).find(
+                    (status) => LISTING_LABELS[status] === label
+                  ),
+                })
+              }
             />
           </div>
         </div>
@@ -371,9 +416,9 @@ export default function BasicInfoSection({
             </div>
             <ManagedChipList
               chips={themeOptions}
-              onRemove={(id) => setThemeOptions((prev) => prev.filter((c) => c.id !== id))}
+              onRemove={notWired}
               addPlaceholder="輸入主題名稱"
-              onAdd={(label) => setThemeOptions((prev) => [...prev, { id: generateId("chip"), label }])}
+              onAdd={notWired}
             />
           </div>
 
@@ -383,7 +428,7 @@ export default function BasicInfoSection({
               <span className="text-xs leading-[1.45em] text-[#535F71]">同步自「網站導覽分類編輯」的地區清單</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {REGION_TAGS.map((tag) => (
+              {regionTags.map((tag) => (
                 <span
                   key={tag}
                   className="flex items-center rounded-[15px] bg-[#ECF1FA] px-3 py-1.5 text-[13px] font-medium leading-[1.4em] text-[#002366]"
@@ -407,9 +452,9 @@ export default function BasicInfoSection({
             </div>
             <ManagedChipList
               chips={statusOptions}
-              onRemove={(id) => setStatusOptions((prev) => prev.filter((c) => c.id !== id))}
+              onRemove={notWired}
               addPlaceholder="輸入狀態名稱"
-              onAdd={(label) => setStatusOptions((prev) => [...prev, { id: generateId("chip"), label }])}
+              onAdd={notWired}
             />
           </div>
 
@@ -433,7 +478,7 @@ export default function BasicInfoSection({
                     <span className="text-[13px] font-medium leading-[1.45em] text-[#002366]">{chip.label}</span>
                     <button
                       type="button"
-                      onClick={() => setBadgeOptions((prev) => prev.filter((c) => c.id !== chip.id))}
+                      onClick={notWired}
                       aria-label={`移除 ${chip.label}`}
                       className="cursor-pointer text-sm leading-none text-[#535F71] opacity-80 hover:text-[#090909]"
                     >
@@ -447,7 +492,7 @@ export default function BasicInfoSection({
               </div>
               <BadgeAddOption
                 placeholder="輸入標章文字"
-                onAdd={(label) => setBadgeOptions((prev) => [...prev, { id: generateId("chip"), label }])}
+                onAdd={notWired}
               />
             </div>
           </div>
@@ -469,12 +514,12 @@ export default function BasicInfoSection({
           </p>
         </div>
         <div className="flex flex-wrap gap-7">
-          {["國外團體", "主題旅遊", "精緻臻品", "美安專區"].map((zone) => {
-            const checked = zones.includes(zone);
+          {ZONES.map(({ label: zone, key }) => {
+            const checked = value[key];
             return (
               <label key={zone} className="flex cursor-pointer items-center gap-2">
                 <span
-                  onClick={() => toggleInArray(zone, zones, setZones)}
+                  onClick={() => onChange({ [key]: !checked })}
                   className={`flex h-[18px] w-[18px] items-center justify-center rounded-[5px] border text-[12px] font-bold leading-none text-white ${
                     checked ? "border-[#0053E0] bg-[#0053E0]" : "border-[#E0E3E8] bg-white"
                   }`}
@@ -494,8 +539,10 @@ export default function BasicInfoSection({
           <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">產品起價</span>
           <input
             type="text"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            inputMode="numeric"
+            placeholder="NT$ 168,000"
+            value={formatPriceFrom(value.price_from)}
+            onChange={(e) => onChange({ price_from: parseAmount(e.target.value) })}
             className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
           />
           <p className="text-xs leading-[1.4em] text-[#535F71]">
@@ -506,8 +553,9 @@ export default function BasicInfoSection({
           <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">幣別</span>
           <input
             type="text"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
+            placeholder="元"
+            value={value.currency}
+            onChange={(e) => onChange({ currency: e.target.value })}
             className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
           />
         </div>
@@ -523,7 +571,7 @@ export default function BasicInfoSection({
               <button
                 key={month}
                 type="button"
-                onClick={() => toggleInArray(month, selectedMonths, setSelectedMonths)}
+                onClick={() => toggleMonth(month)}
                 className={`flex h-[30px] w-[70px] cursor-pointer items-center justify-center rounded-[7px] border text-[13px] font-medium leading-[1.45em] transition ${
                   selected
                     ? "border-[#0053E0] bg-[#0053E0] text-white"
@@ -546,8 +594,8 @@ export default function BasicInfoSection({
           <span className="text-sm font-bold leading-[1.45em] text-[#090909]">預設出發地</span>
           <input
             type="text"
-            value={departureCity}
-            onChange={(e) => setDepartureCity(e.target.value)}
+            value={value.default_origin}
+            onChange={(e) => onChange({ default_origin: e.target.value })}
             className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
           />
         </div>
@@ -555,8 +603,9 @@ export default function BasicInfoSection({
           <span className="text-sm font-bold leading-[1.45em] text-[#090909]">訂金／人</span>
           <input
             type="text"
-            value={deposit}
-            onChange={(e) => setDeposit(e.target.value)}
+            inputMode="numeric"
+            value={formatAmount(value.deposit_per_person)}
+            onChange={(e) => onChange({ deposit_per_person: parseAmount(e.target.value) })}
             className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
           />
         </div>
@@ -573,13 +622,16 @@ export default function BasicInfoSection({
           </div>
           <div className="flex items-center gap-2.5">
             <span className="text-[13px] font-medium leading-[1.45em] text-[#535F71]">前台顯示</span>
-            <ToggleSwitch checked={metaBadgeVisible} onChange={setMetaBadgeVisible} />
+            <ToggleSwitch
+              checked={value.image_summary_visible}
+              onChange={(checked) => onChange({ image_summary_visible: checked })}
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-[13px] leading-[1.45em] text-[#535F71]">前台預覽</span>
           <span className="flex items-center justify-center rounded-full bg-[#002366] px-3.5 py-2 text-[13px] font-medium leading-[1.45em] text-white">
-            {departureCity}出發・10天
+            {value.default_origin}出發・{value.duration_days ?? "–"}天
           </span>
           <span className="text-[13px] leading-[1.45em] text-[#535F71]">自動同步，不需維護第二份文字</span>
         </div>
@@ -597,17 +649,24 @@ export default function BasicInfoSection({
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex flex-1 flex-col gap-[7px]">
           <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">基準出發日</span>
-          <AdminDateField value={departDate} onChange={setDepartDate} />
+          <AdminDateField
+            value={departDate}
+            onChange={(date) => onChange({ base_departure_date: date || null })}
+          />
         </div>
         <div className="flex flex-1 flex-col gap-[7px]">
           <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">基準回程日</span>
-          <AdminDateField value={returnDate} onChange={setReturnDate} />
+          <AdminDateField
+            value={returnDate}
+            onChange={(date) => onChange({ base_return_date: date || null })}
+          />
         </div>
       </div>
 
       <div className="flex h-11 items-center rounded-lg bg-[#DBE8FF] pl-3.5">
         <p className="text-sm font-bold leading-[1.45em] text-[#0053E0]">{generatedDaysSummary}</p>
       </div>
+      {notice && <AdminToast message={notice} variant="warning" onClose={closeNotice} />}
     </section>
   );
 }

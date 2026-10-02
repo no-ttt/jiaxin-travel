@@ -4,36 +4,10 @@ import { useState } from "react";
 import AdminInfoNote from "@/components/admin/ui/AdminInfoNote";
 import { generateId } from "@/components/admin/ui/generateId";
 import RichTextEditor from "./RichTextEditor";
+import { AddImageTile, TripImagePreview, useImageReorder } from "./TripImageTiles";
+import { moveById, type EditableFeatureCard } from "./content";
 
-type ImageItem = { id: string; caption: string };
-
-type HighlightCard = {
-  id: string;
-  title: string;
-  content: string;
-  images: ImageItem[];
-  expanded: boolean;
-};
-
-const INITIAL_CARDS: HighlightCard[] = [
-  {
-    id: generateId("card"),
-    title: "北歐極境景觀與精選體驗",
-    content: "<p>深入北歐峽灣景觀，安排極光觀賞、遊船體驗與在地美食探索，感受絕美自然風光。</p>",
-    images: [
-      { id: generateId("img"), caption: "飯店外觀與周邊環境" },
-      { id: generateId("img"), caption: "館內設施與客房空間" },
-    ],
-    expanded: true,
-  },
-  {
-    id: generateId("card"),
-    title: "波羅的海遊輪",
-    content: "",
-    images: [{ id: generateId("img"), caption: "" }],
-    expanded: false,
-  },
-];
+type HighlightCard = EditableFeatureCard;
 
 function RowActionButton({
   label,
@@ -56,16 +30,25 @@ function RowActionButton({
   );
 }
 
-export default function HighlightsSection({ title, description }: { title: string; description: string }) {
-  const [cards, setCards] = useState<HighlightCard[]>(INITIAL_CARDS);
+export default function HighlightsSection({
+  title,
+  description,
+  value: cards,
+  onChange: setCards,
+}: {
+  title: string;
+  description: string;
+  value: HighlightCard[];
+  onChange: (updater: (prev: HighlightCard[]) => HighlightCard[]) => void;
+}) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const reorderCards = (sourceId: string, targetId: string) => {
     if (sourceId === targetId) return;
     setCards((prev) => {
-      const sourceIndex = prev.findIndex((c) => c.id === sourceId);
-      const targetIndex = prev.findIndex((c) => c.id === targetId);
+      const sourceIndex = prev.findIndex((c) => c._id === sourceId);
+      const targetIndex = prev.findIndex((c) => c._id === targetId);
       if (sourceIndex === -1 || targetIndex === -1) return prev;
       const next = [...prev];
       const [moved] = next.splice(sourceIndex, 1);
@@ -75,22 +58,22 @@ export default function HighlightsSection({ title, description }: { title: strin
   };
 
   const updateCard = (id: string, patch: Partial<HighlightCard>) => {
-    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    setCards((prev) => prev.map((c) => (c._id === id ? { ...c, ...patch } : c)));
   };
 
   const toggleExpand = (id: string) => {
-    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, expanded: !c.expanded } : c)));
+    setCards((prev) => prev.map((c) => (c._id === id ? { ...c, expanded: !c.expanded } : c)));
   };
 
   const duplicateCard = (id: string) => {
     setCards((prev) => {
-      const index = prev.findIndex((c) => c.id === id);
+      const index = prev.findIndex((c) => c._id === id);
       if (index === -1) return prev;
       const source = prev[index];
       const copy: HighlightCard = {
         ...source,
-        id: generateId("card"),
-        images: source.images.map((img) => ({ ...img, id: generateId("img") })),
+        _id: generateId("card"),
+        images: source.images.map((img) => ({ ...img, _id: generateId("img") })),
       };
       const next = [...prev];
       next.splice(index + 1, 0, copy);
@@ -100,7 +83,7 @@ export default function HighlightsSection({ title, description }: { title: strin
 
   const moveCardUp = (id: string) => {
     setCards((prev) => {
-      const index = prev.findIndex((c) => c.id === id);
+      const index = prev.findIndex((c) => c._id === id);
       if (index <= 0) return prev;
       const next = [...prev];
       [next[index - 1], next[index]] = [next[index], next[index - 1]];
@@ -109,28 +92,39 @@ export default function HighlightsSection({ title, description }: { title: strin
   };
 
   const removeCard = (id: string) => {
-    setCards((prev) => prev.filter((c) => c.id !== id));
+    setCards((prev) => prev.filter((c) => c._id !== id));
   };
 
-  const addImage = (cardId: string) => {
+  // Reorders images within the same card; drops onto another card's image are ignored.
+  const imageReorder = useImageReorder((fromId, toId) =>
+    setCards((prev) =>
+      prev.map((item) =>
+        item.images.some((img) => img._id === fromId) ? { ...item, images: moveById(item.images, fromId, toId) } : item
+      )
+    )
+  );
+
+  const addImage = (cardId: string, mediaId: string) => {
     setCards((prev) =>
       prev.map((c) =>
-        c.id === cardId ? { ...c, images: [...c.images, { id: generateId("img"), caption: "" }] } : c
+        c._id === cardId
+          ? { ...c, images: [...c.images, { _id: generateId("img"), media_id: mediaId, caption: "" }] }
+          : c
       )
     );
   };
 
   const removeImage = (cardId: string, imageId: string) => {
     setCards((prev) =>
-      prev.map((c) => (c.id === cardId ? { ...c, images: c.images.filter((img) => img.id !== imageId) } : c))
+      prev.map((c) => (c._id === cardId ? { ...c, images: c.images.filter((img) => img._id !== imageId) } : c))
     );
   };
 
   const updateImageCaption = (cardId: string, imageId: string, caption: string) => {
     setCards((prev) =>
       prev.map((c) =>
-        c.id === cardId
-          ? { ...c, images: c.images.map((img) => (img.id === imageId ? { ...img, caption } : img)) }
+        c._id === cardId
+          ? { ...c, images: c.images.map((img) => (img._id === imageId ? { ...img, caption } : img)) }
           : c
       )
     );
@@ -140,9 +134,9 @@ export default function HighlightsSection({ title, description }: { title: strin
     setCards((prev) => [
       ...prev,
       {
-        id: generateId("card"),
+        _id: generateId("card"),
         title: "",
-        content: "",
+        body_html: "",
         images: [],
         expanded: true,
       },
@@ -169,22 +163,22 @@ export default function HighlightsSection({ title, description }: { title: strin
         {cards.map((card, index) => {
           const cardNumber = String(index + 1).padStart(2, "0");
 
-          const isDragOver = dragOverId === card.id && draggingId !== card.id;
+          const isDragOver = dragOverId === card._id && draggingId !== card._id;
           const dragHandlers = {
             draggable: true,
-            onDragStart: () => setDraggingId(card.id),
+            onDragStart: () => setDraggingId(card._id),
             onDragEnd: () => {
               setDraggingId(null);
               setDragOverId(null);
             },
             onDragOver: (e: React.DragEvent) => {
               e.preventDefault();
-              if (draggingId && draggingId !== card.id) setDragOverId(card.id);
+              if (draggingId && draggingId !== card._id) setDragOverId(card._id);
             },
-            onDragLeave: () => setDragOverId((prev) => (prev === card.id ? null : prev)),
+            onDragLeave: () => setDragOverId((prev) => (prev === card._id ? null : prev)),
             onDrop: (e: React.DragEvent) => {
               e.preventDefault();
-              if (draggingId) reorderCards(draggingId, card.id);
+              if (draggingId) reorderCards(draggingId, card._id);
               setDraggingId(null);
               setDragOverId(null);
             },
@@ -193,11 +187,11 @@ export default function HighlightsSection({ title, description }: { title: strin
           if (!card.expanded) {
             return (
               <div
-                key={card.id}
+                key={card._id}
                 {...dragHandlers}
                 className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white p-[18px] transition ${
                   isDragOver ? "border-[#0053E0]" : "border-[#E0E3E8]"
-                } ${draggingId === card.id ? "opacity-50" : ""}`}
+                } ${draggingId === card._id ? "opacity-50" : ""}`}
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <span className="cursor-grab text-lg leading-none text-[#535F71]">⋮⋮</span>
@@ -208,9 +202,9 @@ export default function HighlightsSection({ title, description }: { title: strin
                   </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <RowActionButton label="複製" onClick={() => duplicateCard(card.id)} />
-                  <RowActionButton label="展開" onClick={() => toggleExpand(card.id)} />
-                  <RowActionButton label="刪除" onClick={() => removeCard(card.id)} />
+                  <RowActionButton label="複製" onClick={() => duplicateCard(card._id)} />
+                  <RowActionButton label="展開" onClick={() => toggleExpand(card._id)} />
+                  <RowActionButton label="刪除" onClick={() => removeCard(card._id)} />
                 </div>
               </div>
             );
@@ -218,11 +212,11 @@ export default function HighlightsSection({ title, description }: { title: strin
 
           return (
             <div
-              key={card.id}
+              key={card._id}
               {...dragHandlers}
               className={`flex flex-col gap-[18px] rounded-2xl border bg-white p-[18px] transition ${
                 isDragOver ? "border-[#0053E0]" : "border-[#E0E3E8]"
-              } ${draggingId === card.id ? "opacity-50" : ""}`}
+              } ${draggingId === card._id ? "opacity-50" : ""}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -235,10 +229,10 @@ export default function HighlightsSection({ title, description }: { title: strin
                   </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <RowActionButton label="複製" onClick={() => duplicateCard(card.id)} />
-                  <RowActionButton label="上移" onClick={() => moveCardUp(card.id)} disabled={index === 0} />
-                  <RowActionButton label="收合" onClick={() => toggleExpand(card.id)} />
-                  <RowActionButton label="刪除" onClick={() => removeCard(card.id)} />
+                  <RowActionButton label="複製" onClick={() => duplicateCard(card._id)} />
+                  <RowActionButton label="上移" onClick={() => moveCardUp(card._id)} disabled={index === 0} />
+                  <RowActionButton label="收合" onClick={() => toggleExpand(card._id)} />
+                  <RowActionButton label="刪除" onClick={() => removeCard(card._id)} />
                 </div>
               </div>
 
@@ -247,7 +241,7 @@ export default function HighlightsSection({ title, description }: { title: strin
                 <input
                   type="text"
                   value={card.title}
-                  onChange={(e) => updateCard(card.id, { title: e.target.value })}
+                  onChange={(e) => updateCard(card._id, { title: e.target.value })}
                   className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
                 />
               </div>
@@ -255,8 +249,8 @@ export default function HighlightsSection({ title, description }: { title: strin
               <div className="flex flex-col gap-[7px]">
                 <span className="text-[13px] font-medium leading-[1.45em] text-[#090909]">內容</span>
                 <RichTextEditor
-                  value={card.content}
-                  onChange={(html) => updateCard(card.id, { content: html })}
+                  value={card.body_html}
+                  onChange={(html) => updateCard(card._id, { body_html: html })}
                   placeholder="輸入卡面內容，可使用粗體、條列、連結等格式。內容會依卡面順序顯示於行程特色區塊。"
                 />
                 <p className="text-xs leading-[1.45em] text-[#535F71]">
@@ -271,39 +265,29 @@ export default function HighlightsSection({ title, description }: { title: strin
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {card.images.map((img) => (
-                    <div key={img.id} className="flex w-[288px] flex-col gap-2">
-                      <div className="relative h-[116px] w-full overflow-hidden rounded-[10px] bg-gradient-to-br from-[#0B1F3A] to-[#1B3A63]">
-                        <button
-                          type="button"
-                          onClick={() => removeImage(card.id, img.id)}
-                          aria-label="移除圖片"
-                          className="absolute right-2 top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-black/50 text-xs text-white hover:bg-black/70"
-                        >
-                          ×
-                        </button>
-                      </div>
+                    <div
+                      key={img._id}
+                      {...imageReorder.dropProps(img._id)}
+                      className={`flex w-[288px] flex-col gap-2 ${imageReorder.tileClass(img._id)}`}
+                    >
+                      <TripImagePreview
+                        mediaId={img.media_id}
+                        dragHandleProps={imageReorder.handleProps(img._id)}
+                        onRemove={() => removeImage(card._id, img._id)}
+                        removeClassName="absolute right-2 top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-black/50 text-xs text-white hover:bg-black/70"
+                      />
                       <div className="flex flex-col gap-[7px]">
                         <span className="text-xs font-medium leading-[1.45em] text-[#090909]">圖片註解</span>
                         <input
                           type="text"
                           value={img.caption}
-                          onChange={(e) => updateImageCaption(card.id, img.id, e.target.value)}
+                          onChange={(e) => updateImageCaption(card._id, img._id, e.target.value)}
                           className="h-[38px] w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-sm leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
                         />
                       </div>
                     </div>
                   ))}
-                  <div className="flex w-[288px] flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => addImage(card.id)}
-                      className="flex h-[116px] w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[#E0E3E8] bg-[#FAFAFA] hover:border-[#0053E0]"
-                    >
-                      <span className="text-[22px] leading-[1.45em] text-[#0053E0]">＋</span>
-                      <span className="text-[13px] font-medium leading-[1.45em] text-[#0053E0]">新增圖片</span>
-                    </button>
-                    <span className="text-xs leading-[1.45em] text-[#535F71]">支援 JPG / PNG</span>
-                  </div>
+                  <AddImageTile onUploaded={(mediaId) => addImage(card._id, mediaId)} />
                 </div>
               </div>
             </div>

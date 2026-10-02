@@ -1,4 +1,4 @@
-import type { TripResult } from "./TripResultCard";
+import type { PublicTripSearchParams } from "@/lib/api/types/trip";
 
 export type FilterSection = {
   id: string;
@@ -20,56 +20,41 @@ export const FILTER_SECTIONS: FilterSection[] = [
   },
 ];
 
-export const DEFAULT_SELECTED_FILTERS = new Set([
-  "6–10 天",
-  "40,000–70,000",
-  "70,000–120,000",
-  "120,000 以上",
-  "秋季（9–11 月）",
-]);
+/** Filter label → API `duration_bands` value. */
+const DURATION_BANDS: Record<string, string> = {
+  "1–5 天": "1-5",
+  "6–10 天": "6-10",
+  "11–15 天": "11-15",
+  "15 天以上": "15+",
+};
 
-function matchesDuration(option: string, days: number): boolean {
-  switch (option) {
-    case "1–5 天":
-      return days <= 5;
-    case "6–10 天":
-      return days >= 6 && days <= 10;
-    case "11–15 天":
-      return days >= 11 && days <= 15;
-    case "15 天以上":
-      return days > 15;
-    default:
-      return false;
-  }
-}
+/**
+ * Filter label → API `budget_bands` value. Unconfirmed: the backend ignored every format
+ * tried, so this is a best guess pending the backend's answer.
+ */
+const BUDGET_BANDS: Record<string, string> = {
+  "20,000 以下": "0-20000",
+  "20,000–40,000": "20000-40000",
+  "40,000–70,000": "40000-70000",
+  "70,000–120,000": "70000-120000",
+  "120,000 以上": "120000+",
+};
 
-function matchesBudget(option: string, price: number): boolean {
-  switch (option) {
-    case "20,000 以下":
-      return price < 20000;
-    case "20,000–40,000":
-      return price >= 20000 && price <= 40000;
-    case "40,000–70,000":
-      return price > 40000 && price <= 70000;
-    case "70,000–120,000":
-      return price > 70000 && price <= 120000;
-    case "120,000 以上":
-      return price > 120000;
-    default:
-      return false;
-  }
-}
+/** Season label → API `departure_months`. */
+const SEASON_MONTHS: Record<string, number[]> = {
+  "春季（3–5 月）": [3, 4, 5],
+  "夏季（6–8 月）": [6, 7, 8],
+  "秋季（9–11 月）": [9, 10, 11],
+  "冬季（12–2 月）": [12, 1, 2],
+};
 
-export function filterTrips(trips: TripResult[], selected: Set<string>): TripResult[] {
-  const durationOptions = FILTER_SECTIONS[0].options.filter((o) => selected.has(o));
-  const budgetOptions = FILTER_SECTIONS[1].options.filter((o) => selected.has(o));
-  const monthOptions = FILTER_SECTIONS[2].options.filter((o) => selected.has(o));
-
-  return trips.filter((trip) => {
-    const durationOk =
-      durationOptions.length === 0 || durationOptions.some((o) => matchesDuration(o, trip.durationDays));
-    const budgetOk = budgetOptions.length === 0 || budgetOptions.some((o) => matchesBudget(o, trip.priceValue));
-    const monthOk = monthOptions.length === 0 || monthOptions.includes(trip.season);
-    return durationOk && budgetOk && monthOk;
-  });
+export function filtersToApiParams(
+  selected: Set<string>
+): Pick<PublicTripSearchParams, "duration_bands" | "budget_bands" | "departure_months"> {
+  const picked = [...selected];
+  return {
+    duration_bands: picked.flatMap((label) => DURATION_BANDS[label] ?? []),
+    budget_bands: picked.flatMap((label) => BUDGET_BANDS[label] ?? []),
+    departure_months: picked.flatMap((label) => SEASON_MONTHS[label] ?? []),
+  };
 }

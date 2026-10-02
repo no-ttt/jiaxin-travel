@@ -4,7 +4,9 @@ import type { TripDetail } from "./types";
 export default function DecisionInfo({ trip }: { trip: TripDetail }) {
   return (
     <div className="flex flex-col gap-3 pb-10">
-      <h1 className="font-serif text-xl font-semibold leading-[1.45] text-[#090909]">{trip.title}</h1>
+      <h1 className="font-serif text-xl font-semibold leading-[1.45] text-[#090909]">
+        {trip.coverHeadline || trip.title}
+      </h1>
 
       <div className="flex flex-col items-stretch gap-4 rounded-[18px] border border-[#E0E3E8] bg-white p-2.5 shadow-[0px_8px_24px_0px_rgba(5,18,36,0.05)] sm:flex-row sm:items-center">
         <div className="relative h-[220px] w-full shrink-0 overflow-hidden rounded-2xl sm:h-[272px] sm:w-[408px]">
@@ -72,7 +74,8 @@ export default function DecisionInfo({ trip }: { trip: TripDetail }) {
               <span className="text-base text-[#E85B20]">售價</span>
             </div>
             <a
-              href={`/contact?tripId=${trip.id}`}
+              href={trip.externalUrl ?? `/contact?tripId=${encodeURIComponent(trip.id)}`}
+              {...(trip.externalUrl ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className="flex h-10 w-[120px] cursor-pointer items-center justify-center rounded-[10px] bg-[#0053E0] text-sm font-medium text-white transition hover:bg-[#0044b8]"
             >
               立即洽詢

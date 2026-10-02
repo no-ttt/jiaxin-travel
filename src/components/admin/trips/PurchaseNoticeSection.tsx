@@ -4,25 +4,9 @@ import { useState } from "react";
 import AdminInfoNote from "@/components/admin/ui/AdminInfoNote";
 import { generateId } from "@/components/admin/ui/generateId";
 import RichTextEditor from "./RichTextEditor";
+import type { EditableNoticeTab } from "./content";
 
-type NoticeTab = {
-  id: string;
-  label: string;
-  visible: boolean;
-  content: string;
-};
-
-const INITIAL_TABS: NoticeTab[] = [
-  {
-    id: generateId("tab"),
-    label: "行前必讀",
-    visible: true,
-    content: "<p>請於出發前詳閱行程內容、集合時間與地點，並確認證件效期符合當地入境規定。</p>",
-  },
-  { id: generateId("tab"), label: "護照簽證", visible: true, content: "" },
-  { id: generateId("tab"), label: "旅遊指南", visible: true, content: "" },
-  { id: generateId("tab"), label: "出入境須知", visible: true, content: "" },
-];
+type NoticeTab = EditableNoticeTab;
 
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -40,19 +24,28 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
   );
 }
 
-export default function PurchaseNoticeSection({ title, description }: { title: string; description: string }) {
-  const [tabs, setTabs] = useState<NoticeTab[]>(INITIAL_TABS);
-  const [activeTabId, setActiveTabId] = useState(INITIAL_TABS[0].id);
+export default function PurchaseNoticeSection({
+  title,
+  description,
+  value: tabs,
+  onChange: setTabs,
+}: {
+  title: string;
+  description: string;
+  value: NoticeTab[];
+  onChange: (updater: (prev: NoticeTab[]) => NoticeTab[]) => void;
+}) {
+  const [activeTabId, setActiveTabId] = useState(tabs[0]?._id ?? "");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
-  const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+  const activeTab = tabs.find((t) => t._id === activeTabId) ?? tabs[0];
 
   const reorderTabs = (sourceId: string, targetId: string) => {
     if (sourceId === targetId) return;
     setTabs((prev) => {
-      const sourceIndex = prev.findIndex((t) => t.id === sourceId);
-      const targetIndex = prev.findIndex((t) => t.id === targetId);
+      const sourceIndex = prev.findIndex((t) => t._id === sourceId);
+      const targetIndex = prev.findIndex((t) => t._id === targetId);
       if (sourceIndex === -1 || targetIndex === -1) return prev;
       const next = [...prev];
       const [moved] = next.splice(sourceIndex, 1);
@@ -62,26 +55,24 @@ export default function PurchaseNoticeSection({ title, description }: { title: s
   };
 
   const updateTab = (id: string, patch: Partial<NoticeTab>) => {
-    setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    setTabs((prev) => prev.map((t) => (t._id === id ? { ...t, ...patch } : t)));
   };
 
   const removeTab = (id: string) => {
-    setTabs((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      if (activeTabId === id && next.length > 0) setActiveTabId(next[0].id);
-      return next;
-    });
+    const next = tabs.filter((t) => t._id !== id);
+    if (activeTabId === id && next.length > 0) setActiveTabId(next[0]._id);
+    setTabs((prev) => prev.filter((t) => t._id !== id));
   };
 
   const addTab = () => {
     const newTab: NoticeTab = {
-      id: generateId("tab"),
-      label: "新分頁",
+      _id: generateId("tab"),
+      title: "新分頁",
       visible: true,
-      content: "",
+      body_html: "",
     };
     setTabs((prev) => [...prev, newTab]);
-    setActiveTabId(newTab.id);
+    setActiveTabId(newTab._id);
   };
 
   return (
@@ -108,35 +99,35 @@ export default function PurchaseNoticeSection({ title, description }: { title: s
 
         <div className="flex flex-wrap items-center gap-2">
           {tabs.map((tab) => {
-            const isActive = tab.id === activeTabId;
-            const isDragOver = dragOverId === tab.id && draggingId !== tab.id;
+            const isActive = tab._id === activeTabId;
+            const isDragOver = dragOverId === tab._id && draggingId !== tab._id;
             return (
               <div
-                key={tab.id}
+                key={tab._id}
                 draggable
-                onDragStart={() => setDraggingId(tab.id)}
+                onDragStart={() => setDraggingId(tab._id)}
                 onDragEnd={() => {
                   setDraggingId(null);
                   setDragOverId(null);
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  if (draggingId && draggingId !== tab.id) setDragOverId(tab.id);
+                  if (draggingId && draggingId !== tab._id) setDragOverId(tab._id);
                 }}
-                onDragLeave={() => setDragOverId((prev) => (prev === tab.id ? null : prev))}
+                onDragLeave={() => setDragOverId((prev) => (prev === tab._id ? null : prev))}
                 onDrop={(e) => {
                   e.preventDefault();
-                  if (draggingId) reorderTabs(draggingId, tab.id);
+                  if (draggingId) reorderTabs(draggingId, tab._id);
                   setDraggingId(null);
                   setDragOverId(null);
                 }}
                 className={`flex h-[52px] items-center gap-1.5 rounded-[10px] border p-2 transition ${
                   isActive ? "border-[#0053E0] bg-[#ECF1FA]" : isDragOver ? "border-[#0053E0] bg-white" : "border-[#E0E3E8] bg-white"
-                } ${draggingId === tab.id ? "opacity-50" : ""}`}
+                } ${draggingId === tab._id ? "opacity-50" : ""}`}
               >
                 <button
                   type="button"
-                  onClick={() => setActiveTabId(tab.id)}
+                  onClick={() => setActiveTabId(tab._id)}
                   className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-[7px] px-1.5 text-left"
                 >
                   <span className="cursor-grab text-lg leading-none text-[#535F71]">⋮⋮</span>
@@ -145,17 +136,17 @@ export default function PurchaseNoticeSection({ title, description }: { title: s
                       isActive ? "text-[#0053E0]" : "text-[#090909]"
                     }`}
                   >
-                    {tab.label}
+                    {tab.title}
                   </span>
                 </button>
                 <div className="flex h-9 shrink-0 items-center gap-2 px-0.5">
                   <span className="text-[11px] font-medium leading-[1.45em] text-[#535F71]">顯示</span>
-                  <ToggleSwitch checked={tab.visible} onChange={(v) => updateTab(tab.id, { visible: v })} />
+                  <ToggleSwitch checked={tab.visible} onChange={(v) => updateTab(tab._id, { visible: v })} />
                 </div>
                 <button
                   type="button"
-                  onClick={() => removeTab(tab.id)}
-                  aria-label={`刪除分頁 ${tab.label}`}
+                  onClick={() => removeTab(tab._id)}
+                  aria-label={`刪除分頁 ${tab.title}`}
                   className="flex h-9 w-5 shrink-0 cursor-pointer items-center justify-center text-[15px] leading-none text-[#535F71]/70 hover:text-[#C71A1A]"
                 >
                   ×
@@ -170,7 +161,7 @@ export default function PurchaseNoticeSection({ title, description }: { title: s
         <div className="flex flex-col gap-4 rounded-2xl border border-[#E0E3E8] bg-white p-[18px]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">
-              目前編輯：{activeTab.label}
+              目前編輯：{activeTab.title}
             </span>
             <span className="text-xs leading-[1.45em] text-[#535F71]">切換上方分頁即可編輯其他內容</span>
           </div>
@@ -179,8 +170,8 @@ export default function PurchaseNoticeSection({ title, description }: { title: s
             <span className="text-[13px] font-medium leading-[1.45em] text-[#090909]">分頁標題</span>
             <input
               type="text"
-              value={activeTab.label}
-              onChange={(e) => updateTab(activeTab.id, { label: e.target.value })}
+              value={activeTab.title}
+              onChange={(e) => updateTab(activeTab._id, { title: e.target.value })}
               className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
             />
           </div>
@@ -188,8 +179,9 @@ export default function PurchaseNoticeSection({ title, description }: { title: s
           <div className="flex flex-col gap-[7px]">
             <span className="text-[13px] font-medium leading-[1.45em] text-[#090909]">內容</span>
             <RichTextEditor
-              value={activeTab.content}
-              onChange={(html) => updateTab(activeTab.id, { content: html })}
+              key={activeTab._id}
+              value={activeTab.body_html}
+              onChange={(html) => updateTab(activeTab._id, { body_html: html })}
               placeholder="輸入前台「訂購須知」分頁要展示的內容。可使用段落、清單與連結。"
             />
             <p className="text-xs leading-[1.45em] text-[#535F71]">

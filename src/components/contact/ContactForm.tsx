@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
+import TurnstileWidget from "@/components/ui/TurnstileWidget";
+import { ApiError } from "@/lib/api/client";
+import { inquiriesApi } from "@/lib/api/endpoints/inquiries";
+import { priceAffixes } from "@/lib/currency";
 import type { TripDetail } from "@/components/trip-detail/types";
 import Dropdown from "@/components/ui/Dropdown";
 
@@ -38,11 +42,60 @@ export default function ContactForm({ trip }: { trip: TripDetail | null }) {
   const [agreed, setAgreed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [preferredTime, setPreferredTime] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const handleToken = useCallback((token: string | null) => setTurnstileToken(token), []);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!agreed) return;
-    setSubmitted(true);
+    if (!agreed || isSubmitting) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const field = (name: string) => String(data.get(name) ?? "").trim();
+
+    setError(null);
+    if (!trip) {
+      setError("請從行程頁面點選「立即洽詢」進行行程洽詢。");
+      return;
+    }
+    if (!field("phone") && !field("lineId")) {
+      setError("聯絡電話與 Line ID 請至少填寫一項。");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await inquiriesApi.submitTrip({
+        trip_code: trip.groupCode,
+        name: field("name"),
+        email: field("email"),
+        phone: field("phone"),
+        line_id: field("lineId"),
+        company: field("company"),
+        preferred_contact_time: preferredTime,
+        message: field("note"),
+        consent: agreed,
+        turnstile_token: turnstileToken,
+        website: field("website"),
+      });
+      setSubmitted(true);
+      form.reset();
+      setPreferredTime("");
+      setAgreed(false);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? (err.detail as { error?: { message?: string } } | undefined)?.error?.message
+          : undefined;
+      setError(message ?? "送出失敗，請稍後再試。");
+    } finally {
+      setIsSubmitting(false);
+      // A Turnstile token is single-use: issue a fresh challenge after each attempt.
+      setTurnstileToken(null);
+      setTurnstileResetKey((key) => key + 1);
+    }
   };
 
   return (
@@ -76,7 +129,9 @@ export default function ContactForm({ trip }: { trip: TripDetail | null }) {
               <span className="text-[#E0E3E8]">｜</span>
               <span>團號 {trip.groupCode}</span>
               <span className="text-[#E0E3E8]">｜</span>
-              <span className="text-[15px] font-bold text-[#0053E0]">NT${trip.price} 起</span>
+              <span className="text-[15px] font-bold text-[#0053E0]">
+                {priceAffixes(trip.currency).prefix} {trip.price} {priceAffixes(trip.currency).suffix}
+              </span>
             </div>
           </div>
         </div>
@@ -165,12 +220,23 @@ export default function ContactForm({ trip }: { trip: TripDetail | null }) {
             </span>
           </label>
 
+          {/* Honeypot for bots: hidden from people, must stay empty. */}
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="absolute -left-[9999px] h-0 w-0 opacity-0"
+          />
+          <TurnstileWidget onToken={handleToken} resetKey={turnstileResetKey} />
+          {error && <p className="text-sm font-medium text-[#C71A1A]">{error}</p>}
           <button
             type="submit"
-            disabled={!agreed}
+            disabled={!agreed || isSubmitting}
             className="flex h-14 w-full cursor-pointer items-center justify-center rounded-xl bg-[#0053E0] text-[17px] font-medium text-white transition hover:bg-[#0044b8] disabled:cursor-not-allowed disabled:bg-[#B7CCF2]"
           >
-            提交
+            {isSubmitting ? "送出中…" : "提交"}
           </button>
 
           {submitted && (

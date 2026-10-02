@@ -1,15 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { generateId } from "@/components/admin/ui/generateId";
-
-type Chip = { id: string; label: string };
-
-const INITIAL_CHIPS: Chip[] = [
-  { id: generateId("chip"), label: "含稅" },
-  { id: generateId("chip"), label: "無購物" },
-  { id: generateId("chip"), label: "贈上網卡" },
-];
+import AdminPromptDialog from "@/components/admin/ui/AdminPromptDialog";
+import AdminSpinner from "@/components/admin/ui/AdminSpinner";
+import { useMedia } from "@/lib/api/hooks/useMedia";
+import { useMediaUpload } from "@/components/admin/ui/useMediaUpload";
+import type { TripForm, TripFormChange } from "./form";
 
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -27,24 +23,37 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
   );
 }
 
-export default function CoverSection({ title, description }: { title: string; description: string }) {
-  const [showChips, setShowChips] = useState(true);
-  const [productName, setProductName] = useState("冰島極光之旅｜追逐北境夢幻光影 10 日");
-  const [productDescription, setProductDescription] = useState(
-    "深入冰島南岸、黃金圈與冰河湖，以舒適節奏安排極光觀賞與自然景觀體驗。"
-  );
-  const [chips, setChips] = useState<Chip[]>(INITIAL_CHIPS);
-  const [coverTitle, setCoverTitle] = useState("冰島極光之旅 AURORA ICELAND");
-  const [days, setDays] = useState("10 天");
+export default function CoverSection({
+  title,
+  description,
+  value,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  value: TripForm;
+  onChange: TripFormChange;
+}) {
+  const chips = value.service_tags;
+  const { data: coverMedia } = useMedia(value.cover_media_id);
+  const coverUrl = coverMedia ? (coverMedia.variants.hero ?? coverMedia.url) : null;
+  const coverUpload = useMediaUpload("image", (mediaId) => onChange({ cover_media_id: mediaId }));
+  const [loadedCoverUrl, setLoadedCoverUrl] = useState<string | null>(null);
+  const hasCover = Boolean(value.cover_media_id);
+  const coverLoaded = coverUrl !== null && loadedCoverUrl === coverUrl;
 
-  const removeChip = (id: string) => {
-    setChips((prev) => prev.filter((c) => c.id !== id));
+  const removeChip = (index: number) => {
+    onChange({ service_tags: chips.filter((_, i) => i !== index) });
   };
 
-  const addChip = () => {
-    const label = window.prompt("輸入服務特色標籤");
-    if (!label?.trim()) return;
-    setChips((prev) => [...prev, { id: generateId("chip"), label: label.trim() }]);
+  const [isAddingChip, setIsAddingChip] = useState(false);
+  const MAX_CHIPS = 10; // backend limit for service_tags
+
+  const addChip = () => setIsAddingChip(true);
+  const validateChip = (label: string) => {
+    if (chips.includes(label)) return `「${label}」已存在`;
+    if (chips.length >= MAX_CHIPS) return `最多 ${MAX_CHIPS} 個標籤`;
+    return null;
   };
 
   return (
@@ -56,15 +65,37 @@ export default function CoverSection({ title, description }: { title: string; de
 
       <div className="flex flex-col gap-4">
         {/* Cover main preview */}
-        <div className="h-[220px] w-full overflow-hidden rounded-[10px] bg-[#E0E3E8] sm:h-[280px] lg:h-[352px]">
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0B1F3A] to-[#1B3A63] text-sm font-medium text-white/70">
-            封面主圖預覽
-          </div>
+        <div
+          {...coverUpload.dropProps}
+          className="relative h-[220px] w-full overflow-hidden rounded-[10px] bg-[#F6F6F6] sm:h-[280px] lg:h-[352px]"
+        >
+          {coverUrl && !coverUpload.isUploading && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={coverUrl}
+              alt=""
+              onLoad={() => setLoadedCoverUrl(coverUrl)}
+              onError={() => setLoadedCoverUrl(coverUrl)}
+              className={`h-full w-full object-cover transition-opacity ${coverLoaded ? "opacity-100" : "opacity-0"}`}
+            />
+          )}
+          {coverUpload.isUploading || (hasCover && !coverLoaded) ? (
+            <AdminSpinner label="圖片載入中" />
+          ) : (
+            !hasCover && (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0B1F3A] to-[#1B3A63] text-sm font-medium text-white/70">
+                {coverUpload.error ?? "封面主圖預覽"}
+              </div>
+            )
+          )}
         </div>
+        <input {...coverUpload.inputProps} accept="image/*" />
 
         <div className="flex w-full items-center gap-[18px]">
           <button
             type="button"
+            onClick={coverUpload.openPicker}
+            disabled={coverUpload.isUploading}
             className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-[#E0E3E8] px-5 text-sm font-medium leading-[1.4em] text-[#1A1C1E] hover:bg-[#F6F6F6]"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -77,6 +108,7 @@ export default function CoverSection({ title, description }: { title: string; de
           </button>
           <button
             type="button"
+            onClick={() => onChange({ cover_media_id: null })}
             className="flex h-10 w-[78px] cursor-pointer items-center justify-center gap-1.5 rounded-lg text-sm font-medium leading-[1.4em] text-[#CD5959] hover:bg-[#FDEDED]"
           >
             <svg width="11" height="12" viewBox="0 0 11 12" fill="none" aria-hidden="true">
@@ -104,7 +136,10 @@ export default function CoverSection({ title, description }: { title: string; de
           </div>
           <div className="flex shrink-0 items-center gap-2.5">
             <span className="text-sm font-medium leading-[1.45em] text-[#090909]">前台顯示服務標籤</span>
-            <ToggleSwitch checked={showChips} onChange={setShowChips} />
+            <ToggleSwitch
+              checked={value.service_tags_visible}
+              onChange={(checked) => onChange({ service_tags_visible: checked })}
+            />
           </div>
         </div>
 
@@ -112,8 +147,8 @@ export default function CoverSection({ title, description }: { title: string; de
           <span className="text-sm font-bold leading-[1.45em] text-[#090909]">行程產品名稱</span>
           <input
             type="text"
-            value={productName}
-            onChange={(e) => setProductName(e.target.value)}
+            value={value.product_name}
+            onChange={(e) => onChange({ product_name: e.target.value })}
             className="h-11 w-full rounded-lg border border-[#E0E3E8] bg-white px-3.5 text-sm font-medium leading-[1.45em] text-[#090909] outline-none focus:border-[#0053E0]"
           />
         </div>
@@ -121,30 +156,30 @@ export default function CoverSection({ title, description }: { title: string; de
         <div className="flex flex-col gap-[7px]">
           <span className="text-sm font-bold leading-[1.45em] text-[#090909]">說明文字</span>
           <textarea
-            value={productDescription}
-            onChange={(e) => setProductDescription(e.target.value)}
+            value={value.product_description}
+            onChange={(e) => onChange({ product_description: e.target.value })}
             rows={3}
             className="w-full resize-none rounded-lg border border-[#E0E3E8] bg-white px-3.5 py-[11px] text-sm font-medium leading-[1.6em] text-[#090909] outline-none focus:border-[#0053E0]"
           />
         </div>
 
-        {showChips && (
+        {value.service_tags_visible && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold leading-[1.45em] text-[#090909]">服務特色標籤</span>
               <span className="text-[13px] leading-[1.45em] text-[#535F71]">最多建議 3–5 個</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {chips.map((chip) => (
+              {chips.map((chip, index) => (
                 <div
-                  key={chip.id}
+                  key={chip}
                   className="flex items-center gap-1.5 rounded-full border border-[#E0E3E8] bg-[#ECF1FA] py-[6px] pl-3 pr-2.5"
                 >
-                  <span className="text-[13px] font-medium leading-[1.4em] text-[#002366]">{chip.label}</span>
+                  <span className="text-[13px] font-medium leading-[1.4em] text-[#002366]">{chip}</span>
                   <button
                     type="button"
-                    onClick={() => removeChip(chip.id)}
-                    aria-label={`移除 ${chip.label}`}
+                    onClick={() => removeChip(index)}
+                    aria-label={`移除 ${chip}`}
                     className="cursor-pointer text-sm leading-none text-[#535F71] hover:text-[#090909]"
                   >
                     ×
@@ -172,8 +207,8 @@ export default function CoverSection({ title, description }: { title: string; de
           <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">封面主標題</span>
           <input
             type="text"
-            value={coverTitle}
-            onChange={(e) => setCoverTitle(e.target.value)}
+            value={value.cover_headline}
+            onChange={(e) => onChange({ cover_headline: e.target.value })}
             className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
           />
           <p className="text-[11px] leading-[1.4em] text-[#535F71]">
@@ -184,8 +219,13 @@ export default function CoverSection({ title, description }: { title: string; de
           <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">天數</span>
           <input
             type="text"
-            value={days}
-            onChange={(e) => setDays(e.target.value)}
+            inputMode="numeric"
+            placeholder="例：10"
+            value={value.duration_days ?? ""}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/[^\d]/g, "");
+              onChange({ duration_days: digits ? Math.min(60, Number(digits)) : null });
+            }}
             className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
           />
           <p className="text-[11px] leading-[1.4em] text-[#535F71]">
@@ -193,6 +233,19 @@ export default function CoverSection({ title, description }: { title: string; de
           </p>
         </div>
       </div>
+      {isAddingChip && (
+        <AdminPromptDialog
+          title="新增服務特色標籤"
+          label="標籤文字"
+          placeholder="例：含稅、無購物、贈上網卡"
+          validate={validateChip}
+          onCancel={() => setIsAddingChip(false)}
+          onConfirm={(label) => {
+            onChange({ service_tags: [...chips, label] });
+            setIsAddingChip(false);
+          }}
+        />
+      )}
     </section>
   );
 }

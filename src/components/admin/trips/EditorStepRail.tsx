@@ -1,17 +1,18 @@
 "use client";
 
-import { EDITOR_STEPS, type EditorStepKey } from "./editor-steps";
+import { EDITOR_STEPS, type EditorStep, type EditorStepKey } from "./editor-steps";
 
 type EditorStepRailProps = {
   activeStep: EditorStepKey;
   onSelect: (step: EditorStepKey) => void;
+  steps?: EditorStep[];
 };
 
-export default function EditorStepRail({ activeStep, onSelect }: EditorStepRailProps) {
+export default function EditorStepRail({ activeStep, onSelect, steps = EDITOR_STEPS }: EditorStepRailProps) {
   return (
     <div className="w-full overflow-x-auto rounded-2xl border border-[#E0E3E8] bg-white p-2">
       <div className="flex w-max items-center gap-2">
-        {EDITOR_STEPS.map((step) => {
+        {steps.map((step) => {
           const isActive = step.key === activeStep;
           return (
             <button

@@ -49,13 +49,16 @@ function FlightRow({ flight, isFirstOfDirection }: { flight: FlightLeg; isFirstO
   );
 }
 
-export default function FlightInfo({ flights }: { flights: FlightLeg[] }) {
+export default function FlightInfo({ flights, note }: { flights: FlightLeg[]; note?: string }) {
   return (
     <section id="flights" className="flex scroll-mt-28 flex-col gap-[18px] pt-10">
       <h2 className="font-serif text-2xl font-bold text-[#090909]">航程資訊</h2>
-      <p className="flex h-[42px] items-center text-[13px] text-[#535F71]">
-        以下為預定航班資訊；實際航班編號、飛行時間與機場安排仍以出團前最終確認為準。
-      </p>
+      {/* 後台「航程備註」; nothing is shown when it's empty. */}
+      {note?.trim() && (
+        <p className="flex min-h-[42px] items-center whitespace-pre-line text-[13px] text-[#535F71]">
+          {note.trim()}
+        </p>
+      )}
 
       <div className="overflow-x-auto rounded-[14px] bg-white shadow-[0px_8px_24px_0px_rgba(5,18,36,0.05)]">
         <table className="w-full min-w-[850px] border-collapse">

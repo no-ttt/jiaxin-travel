@@ -1,28 +1,37 @@
 "use client";
 
-import { useState } from "react";
 import AdminSectionCard from "../ui/AdminSectionCard";
 import AdminItemCard from "../ui/AdminItemCard";
 import AdminTextInput from "../ui/AdminTextInput";
 import AdminImageDropzone from "../ui/AdminImageDropzone";
 import AdminAddButton from "../ui/AdminAddButton";
 import { generateId } from "../ui/generateId";
-import { useDirtyTracking } from "../ui/useDirtyTracking";
-import { INITIAL_HOMEPAGE_VIDEOS, type StoryVideo } from "./data";
+import { useMediaUpload } from "../ui/useMediaUpload";
+import type { StoryVideo } from "./data";
 
 const MAX_VIDEOS = 3;
 
 function VideoSourceToggle({
   sourceType,
   videoUrl,
+  videoMediaId,
   onSourceTypeChange,
   onVideoUrlChange,
+  onVideoMediaIdChange,
 }: {
-  sourceType: StoryVideo["sourceType"];
-  videoUrl?: string;
-  onSourceTypeChange: (sourceType: StoryVideo["sourceType"]) => void;
+  sourceType: StoryVideo["source_type"];
+  videoUrl: string | null;
+  videoMediaId: string | null;
+  onSourceTypeChange: (sourceType: StoryVideo["source_type"]) => void;
   onVideoUrlChange: (value: string) => void;
+  onVideoMediaIdChange: (mediaId: string) => void;
 }) {
+  const { inputProps, dropProps, openPicker, isUploading, error } = useMediaUpload(
+    "video",
+    onVideoMediaIdChange
+  );
+  const uploadLabel = isUploading ? "上傳中…" : videoMediaId ? "已上傳影片，點擊更換" : "上傳影片檔";
+
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex gap-2">
@@ -58,12 +67,18 @@ function VideoSourceToggle({
           <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">影片檔案</span>
           <button
             type="button"
+            onClick={openPicker}
+            disabled={isUploading}
+            {...dropProps}
             className="flex h-[116px] w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[#E0E3E8] bg-[#FAFAFA] transition hover:border-[#0053E0]"
           >
             <span className="text-[22px] leading-[1.45em] text-[#0053E0]">＋</span>
-            <span className="text-[13px] font-medium leading-[1.45em] text-[#0053E0]">上傳影片檔</span>
+            <span className="text-[13px] font-medium leading-[1.45em] text-[#0053E0]">{uploadLabel}</span>
           </button>
-          <span className="text-xs leading-[1.45em] text-[#535F71]">支援 MP4 / MOV，檔案大小上限 200MB</span>
+          <input {...inputProps} accept="video/mp4,video/quicktime" />
+          <span className="text-xs leading-[1.45em] text-[#535F71]">
+            {error ? <span className="text-red-600">{error}</span> : "支援 MP4 / MOV，檔案大小上限 200MB"}
+          </span>
         </div>
       )}
     </div>
@@ -71,24 +86,31 @@ function VideoSourceToggle({
 }
 
 export default function StoryVideoSection({
-  onDirtyChange,
-  resetKey,
+  value: videos,
+  onChange: setVideos,
 }: {
-  onDirtyChange?: (dirty: boolean) => void;
-  resetKey?: unknown;
+  value: StoryVideo[];
+  onChange: (updater: (prev: StoryVideo[]) => StoryVideo[]) => void;
 }) {
-  const [videos, setVideos] = useState<StoryVideo[]>(INITIAL_HOMEPAGE_VIDEOS);
-  useDirtyTracking(videos, onDirtyChange, resetKey);
-
   const updateVideo = (id: string, patch: Partial<StoryVideo>) => {
-    setVideos((prev) => prev.map((video) => (video.id === id ? { ...video, ...patch } : video)));
+    setVideos((prev) => prev.map((video) => (video._id === id ? { ...video, ...patch } : video)));
   };
 
   const addVideo = () => {
     setVideos((prev) =>
       prev.length >= MAX_VIDEOS
         ? prev
-        : [...prev, { id: generateId("video"), title: "", sourceType: "url", videoUrl: "" }]
+        : [
+            ...prev,
+            {
+              _id: generateId("video"),
+              title: "",
+              source_type: "url",
+              video_url: "",
+              video_media_id: null,
+              thumb_media_id: null,
+            },
+          ]
     );
   };
 
@@ -102,7 +124,7 @@ export default function StoryVideoSection({
   };
 
   const removeVideo = (id: string) => {
-    setVideos((prev) => prev.filter((video) => video.id !== id));
+    setVideos((prev) => prev.filter((video) => video._id !== id));
   };
 
   return (
@@ -112,25 +134,32 @@ export default function StoryVideoSection({
     >
       {videos.map((video, index) => (
         <AdminItemCard
-          key={video.id}
+          key={video._id}
           badge={`影片 ${index + 1}`}
           actions={[
             { label: "上移", onClick: () => moveVideoUp(index), disabled: index === 0 },
-            { label: "刪除", onClick: () => removeVideo(video.id) },
+            { label: "刪除", onClick: () => removeVideo(video._id) },
           ]}
         >
           <AdminTextInput
             label="影片標題"
             value={video.title}
-            onChange={(value) => updateVideo(video.id, { title: value })}
+            onChange={(value) => updateVideo(video._id, { title: value })}
           />
           <VideoSourceToggle
-            sourceType={video.sourceType}
-            videoUrl={video.videoUrl}
-            onSourceTypeChange={(sourceType) => updateVideo(video.id, { sourceType })}
-            onVideoUrlChange={(videoUrl) => updateVideo(video.id, { videoUrl })}
+            sourceType={video.source_type}
+            videoUrl={video.video_url}
+            videoMediaId={video.video_media_id}
+            onSourceTypeChange={(source_type) => updateVideo(video._id, { source_type })}
+            onVideoUrlChange={(video_url) => updateVideo(video._id, { video_url })}
+            onVideoMediaIdChange={(video_media_id) => updateVideo(video._id, { video_media_id })}
           />
-          <AdminImageDropzone fieldLabel="影片縮圖（列表顯示用）" label="新增圖片" />
+          <AdminImageDropzone
+            fieldLabel="影片縮圖（列表顯示用）"
+            label="新增圖片"
+            mediaId={video.thumb_media_id}
+            onChange={(thumb_media_id) => updateVideo(video._id, { thumb_media_id })}
+          />
         </AdminItemCard>
       ))}
       <AdminAddButton label="新增影片" onClick={addVideo} disabled={videos.length >= MAX_VIDEOS} />

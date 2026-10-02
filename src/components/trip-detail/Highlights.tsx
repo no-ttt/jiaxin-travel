@@ -23,14 +23,21 @@ function FeatureCard({ block }: { block: FeatureBlock }) {
   return (
     <SectionCard>
       <SectionHeader title={block.title} />
-      <div className="flex flex-col gap-5">
-        {block.paragraphs.map((p, i) => (
-          <p key={i} className="whitespace-pre-line text-sm leading-[1.75] text-[#535F71]">
-            {p}
-          </p>
-        ))}
-      </div>
-      <ImageCarousel images={block.images} caption={block.caption} />
+      {block.bodyHtml !== undefined ? (
+        // Rich text authored in the admin editor (行程特色).
+        <div className="text-sm leading-[1.75] text-[#535F71] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: block.bodyHtml }} />
+      ) : (
+        <div className="flex flex-col gap-5">
+          {block.paragraphs.map((p, i) => (
+            <p key={i} className="whitespace-pre-line text-sm leading-[1.75] text-[#535F71]">
+              {p}
+            </p>
+          ))}
+        </div>
+      )}
+      {block.images.length > 0 && (
+        <ImageCarousel images={block.images} caption={block.caption} captions={block.captions} />
+      )}
     </SectionCard>
   );
 }
@@ -64,14 +71,16 @@ export default function Highlights({ trip }: { trip: TripDetail }) {
         <FeatureCard key={block.id} block={block} />
       ))}
 
-      <SectionCard>
-        <SectionHeader title="更多特色" />
-        <p className="whitespace-pre-line text-base leading-[2] text-[#535F71]">
-          {trip.moreFeatures.map((f) => `  - ${f}`).join("\n")}
-        </p>
-      </SectionCard>
+      {trip.moreFeatures.length > 0 && (
+        <SectionCard>
+          <SectionHeader title="更多特色" />
+          <p className="whitespace-pre-line text-base leading-[2] text-[#535F71]">
+            {trip.moreFeatures.map((f) => `  - ${f}`).join("\n")}
+          </p>
+        </SectionCard>
+      )}
 
-      <SpecCard specs={trip.specs} galleryImages={trip.specGalleryImages} />
+      {trip.specs.length > 0 && <SpecCard specs={trip.specs} galleryImages={trip.specGalleryImages} />}
     </section>
   );
 }

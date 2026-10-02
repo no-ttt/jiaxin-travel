@@ -1,27 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import AdminInfoNote from "../ui/AdminInfoNote";
+import AdminToast from "../ui/AdminToast";
 import AdminSectionCard from "../ui/AdminSectionCard";
-import { useDirtyTracking } from "../ui/useDirtyTracking";
-import { INITIAL_HOMEPAGE_SEARCH_KEYWORDS } from "./data";
 
 export default function SearchKeywordsSection({
-  onDirtyChange,
-  resetKey,
+  value: keywords,
+  onChange: setKeywords,
 }: {
-  onDirtyChange?: (dirty: boolean) => void;
-  resetKey?: unknown;
+  value: string[];
+  onChange: (updater: (prev: string[]) => string[]) => void;
 }) {
-  const [keywords, setKeywords] = useState<string[]>(INITIAL_HOMEPAGE_SEARCH_KEYWORDS);
-  useDirtyTracking(keywords, onDirtyChange, resetKey);
   const [newKeyword, setNewKeyword] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const closeWarning = useCallback(() => setWarning(null), []);
 
   const addKeyword = () => {
     const trimmed = newKeyword.trim();
-    if (!trimmed || keywords.includes(trimmed)) return;
+    if (!trimmed) return;
+    if (keywords.includes(trimmed)) {
+      setWarning(`「${trimmed}」已存在！`);
+      return;
+    }
     setKeywords((prev) => [...prev, trimmed]);
     setNewKeyword("");
   };
@@ -101,7 +104,8 @@ export default function SearchKeywordsSection({
             value={newKeyword}
             onChange={(e) => setNewKeyword(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              // Ignore the Enter that confirms an IME (注音/拼音) composition.
+              if (e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229) {
                 e.preventDefault();
                 addKeyword();
               }
@@ -122,6 +126,7 @@ export default function SearchKeywordsSection({
       <AdminInfoNote>
         每個關鍵字對應前台的一個快速搜尋標籤，使用者點擊後將直接前往該關鍵字的行程搜尋結果頁（無需另外設定連結網址）；拖曳排序可調整顯示順序，關閉後該關鍵字將不再顯示於首頁。
       </AdminInfoNote>
+      {warning && <AdminToast message={warning} variant="warning" onClose={closeWarning} />}
     </AdminSectionCard>
   );
 }

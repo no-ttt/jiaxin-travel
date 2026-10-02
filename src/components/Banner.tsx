@@ -3,28 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { buildSearchHref, type SearchUrlState } from "@/components/search/searchUrl";
+import { useNavigation } from "@/lib/api/hooks/useCms";
+import type { TripZone } from "@/lib/api/types/trip";
 import Dropdown from "@/components/ui/Dropdown";
 
-const SLIDES = [
-  {
-    id: "banner-1",
-    image: "/images/banner-1.png",
-    title: "無限延展的地平線，最完美的出發。",
-    subtitle: "專為追求完美的您，打造每一場獨一無二的奢華回憶。",
-  },
-  {
-    id: "banner-2",
-    image: "/images/banner-2.png",
-    title: "秋季線上旅展，限時優惠中。",
-    subtitle: "2026.07.10（五）- 08.09（日），精選歐洲、土耳其行程一次搶購。",
-  },
-  {
-    id: "banner-3",
-    image: "/images/banner-3.png",
-    title: "卡帕多奇亞的熱氣球，等你來搭乘。",
-    subtitle: "專為追求完美的您，打造每一場獨一無二的奢華回憶。",
-  },
-];
+export type BannerSlide = {
+  id: string;
+  image: string | null;
+  title: string;
+  subtitle: string;
+};
 
 const AUTOPLAY_INTERVAL = 6000;
 const TAB_TRANSITION_DURATION = 400;
@@ -44,7 +33,12 @@ const TABS: SearchTab[] = [
   { id: "visa", label: "簽證", kind: "service" },
 ];
 
-const THEME_CATEGORIES = ["賞楓行程", "親子旅遊", "蜜月旅行", "美食饗宴", "自然探索"];
+/** Search tab → API zone. */
+const TAB_ZONES: Record<string, TripZone> = {
+  group: "overseas_group",
+  boutique: "premium",
+  theme: "theme_travel",
+};
 
 const SERVICE_CONTENT: Record<
   string,
@@ -73,7 +67,7 @@ const SERVICE_CONTENT: Record<
   },
 };
 
-export default function Banner() {
+export default function Banner({ slides }: { slides: BannerSlide[] }) {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeTabId, setActiveTabId] = useState(TABS[0].id);
@@ -96,22 +90,28 @@ export default function Banner() {
   );
 
   const goToPrev = useCallback(() => {
-    setActiveIndex((index) => (index - 1 + SLIDES.length) % SLIDES.length);
-  }, []);
+    setActiveIndex((index) => (index - 1 + slides.length) % slides.length);
+  }, [slides.length]);
 
   const goToNext = useCallback(() => {
-    setActiveIndex((index) => (index + 1) % SLIDES.length);
-  }, []);
+    setActiveIndex((index) => (slides.length === 0 ? 0 : (index + 1) % slides.length));
+  }, [slides.length]);
 
   useEffect(() => {
+    if (slides.length === 0) return;
     const timer = setInterval(goToNext, AUTOPLAY_INTERVAL);
     return () => clearInterval(timer);
-  }, [goToNext, activeIndex]);
+  }, [goToNext, activeIndex, slides.length]);
 
   return (
     <section className="relative">
       <div className="relative h-[520px] w-full overflow-hidden sm:h-[560px] lg:h-[640px]">
-        {SLIDES.map((slide, index) => (
+        {slides.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#E0E3E8] text-sm text-[#94969C]">
+            尚無 Banner 資料
+          </div>
+        )}
+        {slides.map((slide, index) => (
           <div
             key={slide.id}
             aria-hidden={index !== activeIndex}
@@ -119,13 +119,19 @@ export default function Banner() {
               index === activeIndex ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
           >
-            <Image
-              src={slide.image}
-              alt=""
-              fill
-              priority={index === 0}
-              className="object-cover"
-            />
+            {slide.image ? (
+              <Image
+                src={slide.image}
+                alt=""
+                fill
+                priority={index === 0}
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-[#0F1C36] text-sm text-white/60">
+                無 Banner 圖片
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-tr from-[rgba(15,28,54,0.55)] via-[rgba(15,28,54,0.25)] to-transparent" />
             <div className="absolute inset-x-0 bottom-32 px-6 sm:bottom-28 sm:px-12 lg:bottom-36 lg:px-[170px]">
               <div className="max-w-[840px]">
@@ -140,40 +146,44 @@ export default function Banner() {
           </div>
         ))}
 
-        <button
-          type="button"
-          onClick={goToPrev}
-          aria-label="上一張"
-          className="absolute left-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm transition hover:bg-white sm:left-8"
-        >
-          <svg width="24" height="24" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-            <path d="M22 14L16 20L22 26" stroke="#042B7B" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={goToNext}
-          aria-label="下一張"
-          className="absolute right-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm transition hover:bg-white sm:right-8"
-        >
-          <svg width="24" height="24" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-            <path d="M18 14L24 20L18 26" stroke="#042B7B" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </button>
-
-        <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 gap-2">
-          {SLIDES.map((slide, index) => (
+        {slides.length > 1 && (
+          <>
             <button
-              key={slide.id}
               type="button"
-              aria-label={`前往第 ${index + 1} 張輪播圖`}
-              onClick={() => setActiveIndex(index)}
-              className={`h-2 cursor-pointer rounded-full transition-all ${
-                index === activeIndex ? "w-6 bg-white" : "w-2 bg-white/50"
-              }`}
-            />
-          ))}
-        </div>
+              onClick={goToPrev}
+              aria-label="上一張"
+              className="absolute left-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm transition hover:bg-white sm:left-8"
+            >
+              <svg width="24" height="24" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                <path d="M22 14L16 20L22 26" stroke="#042B7B" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={goToNext}
+              aria-label="下一張"
+              className="absolute right-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm transition hover:bg-white sm:right-8"
+            >
+              <svg width="24" height="24" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                <path d="M18 14L24 20L18 26" stroke="#042B7B" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+              {slides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  aria-label={`前往第 ${index + 1} 張輪播圖`}
+                  onClick={() => setActiveIndex(index)}
+                  className={`h-2 cursor-pointer rounded-full transition-all ${
+                    index === activeIndex ? "w-6 bg-white" : "w-2 bg-white/50"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="relative z-10 mx-4 -mt-8 rounded-3xl bg-white shadow-[0px_12px_40px_-12px_rgba(24,72,150,0.1)] sm:mx-8 sm:-mt-14 lg:mx-[120px] lg:-mt-14">
@@ -206,7 +216,7 @@ export default function Banner() {
             <SearchPanel
               keywordVariant={activeTab.id}
               isKeywordFading={Boolean(pendingTab) && !isKindChange}
-              onSearch={() => router.push("/search")}
+              onSearch={(state) => router.push(buildSearchHref({ ...state, zone: TAB_ZONES[activeTab.id] }))}
             />
           ) : (
             <ServicePanel {...SERVICE_CONTENT[activeTab.id]} />
@@ -224,36 +234,62 @@ function SearchPanel({
 }: {
   keywordVariant: string;
   isKeywordFading: boolean;
-  onSearch: () => void;
+  onSearch: (state: Partial<SearchUrlState>) => void;
 }) {
+  const [destination, setDestination] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [themeId, setThemeId] = useState<number | null>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const handleSearch = () =>
+    onSearch({
+      destination,
+      // 精緻璽品 has a fixed (disabled) keyword; 主題旅遊 picks a theme instead of typing.
+      keyword: keywordVariant === "group" ? keyword : "",
+      themeId: keywordVariant === "theme" ? themeId : null,
+      dateFrom,
+      dateTo,
+    });
+
   return (
     <div className="flex flex-col gap-8 rounded-b-3xl px-6 py-8 sm:px-12">
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
         <div className="flex flex-col gap-4">
-          <SearchField label="地區／目的地" placeholder="輸入目的地（國家、地區或城市）" />
+          <SearchField
+            label="地區／目的地"
+            placeholder="輸入目的地（國家、地區或城市）"
+            value={destination}
+            onChange={setDestination}
+          />
           <div
             className={`transition-opacity duration-[400ms] ease-in-out ${
               isKeywordFading ? "opacity-0" : "opacity-100"
             }`}
           >
             {keywordVariant === "theme" ? (
-              <ThemeDropdownField />
+              <ThemeDropdownField value={themeId} onChange={setThemeId} />
             ) : keywordVariant === "boutique" ? (
               <SearchField label="關鍵字" placeholder="精緻璽品" disabled />
             ) : (
-              <SearchField label="關鍵字" placeholder="輸入目的地（國家、地區或城市）" />
+              <SearchField
+                label="關鍵字"
+                placeholder="輸入關鍵字（例如：溫泉、賞楓）"
+                value={keyword}
+                onChange={setKeyword}
+              />
             )}
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <SearchField label="出發日期" placeholder="輸入目的地（國家、地區或城市）" type="date" />
-          <SearchField label="結束日期" placeholder="輸入目的地（國家、地區或城市）" type="date" />
+          <SearchField label="出發日期" placeholder="" type="date" value={dateFrom} onChange={setDateFrom} />
+          <SearchField label="結束日期" placeholder="" type="date" value={dateTo} onChange={setDateTo} />
         </div>
       </div>
 
       <button
         type="button"
-        onClick={onSearch}
+        onClick={handleSearch}
         className="flex h-12 cursor-pointer items-center justify-center gap-3 rounded-xl bg-[#0053E0] text-lg font-bold uppercase tracking-wide text-white transition hover:bg-[#0044b8]"
       >
         <Image src="/images/search-icon.svg" alt="" width={24} height={24} />
@@ -305,8 +341,17 @@ function ServicePanel({
   );
 }
 
-function ThemeDropdownField() {
-  const [category, setCategory] = useState("");
+function ThemeDropdownField({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (themeId: number | null) => void;
+}) {
+  // Visible themes from 產品分類設定 (public navigation API).
+  const { data: navigation } = useNavigation();
+  const themes = navigation?.themes ?? [];
+  const category = themes.find((theme) => theme.id === value)?.name ?? "";
 
   return (
     <div className="flex items-center gap-4">
@@ -316,9 +361,9 @@ function ThemeDropdownField() {
       <div className="min-w-0 flex-1">
         <Dropdown
           placeholder="選擇主題分類"
-          options={THEME_CATEGORIES}
+          options={themes.map((theme) => theme.name)}
           value={category}
-          onChange={setCategory}
+          onChange={(name) => onChange(themes.find((theme) => theme.name === name)?.id ?? null)}
         />
       </div>
     </div>
@@ -330,11 +375,15 @@ function SearchField({
   placeholder,
   type = "text",
   disabled = false,
+  value,
+  onChange,
 }: {
   label: string;
   placeholder: string;
   type?: "text" | "date";
   disabled?: boolean;
+  value?: string;
+  onChange?: (value: string) => void;
 }) {
   return (
     <div className="flex items-center gap-4">
@@ -345,6 +394,8 @@ function SearchField({
         type={type}
         placeholder={placeholder}
         disabled={disabled}
+        value={value}
+        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         className={`min-w-0 flex-1 rounded-[10px] border px-4 py-3 text-sm focus:outline-none ${
           disabled
             ? "cursor-not-allowed border-[#D9DADD] bg-[#EAEBED] text-[#94969C] placeholder:text-[#94969C]"

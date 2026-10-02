@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
-
-export default function Pagination({ pageCount }: { pageCount: number }) {
-  const [page, setPage] = useState(1);
+export default function Pagination({
+  page,
+  pageCount,
+  onPageChange,
+}: {
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
+}) {
+  const setPage = (next: number | ((prev: number) => number)) =>
+    onPageChange(typeof next === "function" ? next(page) : next);
 
   return (
     <div className="flex items-center justify-center gap-2 py-4">

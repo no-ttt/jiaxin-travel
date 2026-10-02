@@ -13,6 +13,55 @@ const PLACEHOLDER_CONTENT: Record<Exclude<Tab, "行前必讀">, string> = {
 };
 
 export default function BookingNotice({ trip }: { trip: TripDetail }) {
+  if (trip.noticeTabs) return <ApiBookingNotice tabs={trip.noticeTabs} />;
+  return <MockBookingNotice trip={trip} />;
+}
+
+/** Tabs and rich-text content maintained in the admin (訂購須知). */
+function ApiBookingNotice({ tabs }: { tabs: NonNullable<TripDetail["noticeTabs"]> }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const active = tabs[activeIndex] ?? tabs[0];
+
+  return (
+    <section id="notice" className="scroll-mt-28 pt-10">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-6">
+        <h2 className="whitespace-nowrap font-serif text-2xl font-bold text-[#090909]">訂購須知</h2>
+        <div className="flex flex-wrap items-center gap-1">
+          {tabs.map((tab, index) => (
+            <button
+              key={`${tab.title}-${index}`}
+              type="button"
+              onClick={() => setActiveIndex(index)}
+              className={`flex h-10 cursor-pointer items-center justify-center rounded-[9px] px-3 text-sm transition ${
+                index === activeIndex
+                  ? "bg-[#ECF1FA] font-bold text-[#0053E0]"
+                  : "font-medium text-[#535F71] hover:bg-slate-50"
+              }`}
+            >
+              {tab.title}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-[22px] pb-[30px] pt-[22px]">
+        <div className="rounded-[10px] border border-[#E0E3E8] bg-[#ECF1FA] px-3.5 py-2.5">
+          <p className="text-[13px] leading-relaxed text-[#333]">
+            ★ 為確保您有一趟美好的旅行，報名前請務必詳閱以下內容
+          </p>
+        </div>
+        {active && (
+          <div
+            className="rounded-2xl border border-[#E0E3E8] bg-white px-5 py-[22px] text-sm leading-relaxed text-[#333] shadow-[0px_7px_20px_0px_rgba(5,20,41,0.04)] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+            dangerouslySetInnerHTML={{ __html: active.bodyHtml }}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function MockBookingNotice({ trip }: { trip: TripDetail }) {
   const [activeTab, setActiveTab] = useState<Tab>("行前必讀");
 
   return (

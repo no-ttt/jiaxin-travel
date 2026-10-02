@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import AdminToast from "@/components/admin/ui/AdminToast";
+import { ApiError } from "@/lib/api/client";
+import { tripsApi } from "@/lib/api/endpoints/trips";
+import { useBatchTrips, useDeleteTrip, useDuplicateTrip } from "@/lib/api/hooks/useTrips";
+import { useRegions, useThemes } from "@/lib/api/hooks/useTaxonomy";
+import type { PublishStatus, TripListFilters, TripType, TripZone } from "@/lib/api/types/trip";
 import ChevronDownIcon from "./ChevronDownIcon";
 import FilterDropdown from "./FilterDropdown";
 import RowActionsMenu from "./RowActionsMenu";
 import {
   FILTER_GROUPS,
-  MOCK_TRIPS,
+  SINGLE_VALUE_FILTERS,
   TRIP_KIND_LABEL,
   TRIP_KIND_STYLE,
   TRIP_STATUS_LABEL,
   TRIP_STATUS_STYLE,
+  toTripRow,
   type FilterGroupKey,
-  type TripRow,
 } from "./data";
 
 const EMPTY_FILTERS: Record<FilterGroupKey, string[]> = {
@@ -25,22 +32,33 @@ const EMPTY_FILTERS: Record<FilterGroupKey, string[]> = {
   days: [],
 };
 
-function matchesDaysRange(days: number, range: string) {
-  if (range === "1-5") return days <= 5;
-  if (range === "6-10") return days >= 6 && days <= 10;
-  if (range === "11+") return days >= 11;
-  return true;
-}
-
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 type SortKey = "days" | "priceValue" | "lastEditedMinutesAgo";
 type SortDirection = "asc" | "desc";
 type SortState = { key: SortKey; direction: SortDirection } | null;
 
+/** Maps a column sort to the API `sort` param ("lastEditedMinutesAgo" asc = most recent first). */
+function toApiSort(sort: SortState): string | undefined {
+  if (!sort) return undefined;
+  if (sort.key === "days") return `duration_${sort.direction}`;
+  if (sort.key === "priceValue") return `price_${sort.direction}`;
+  return sort.direction === "asc" ? "updated_desc" : "updated_asc";
+}
+
+function apiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const message = (err.detail as { error?: { message?: string } } | undefined)?.error?.message;
+    if (message) return message;
+  }
+  return fallback;
+}
+
+type PendingDelete = { ids: string[]; label: string } | null;
+type Toast = { message: string; variant: "success" | "warning" } | null;
+
 export default function TripsTable() {
   const router = useRouter();
-  const [allTrips, setAllTrips] = useState<TripRow[]>(MOCK_TRIPS);
   const [filters, setFilters] = useState<Record<FilterGroupKey, string[]>>(EMPTY_FILTERS);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -49,32 +67,92 @@ export default function TripsTable() {
   const [pageSizeOpen, setPageSizeOpen] = useState(false);
   const pageSizeRef = useRef<HTMLDivElement>(null);
   const [sort, setSort] = useState<SortState>(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
+  const [toast, setToast] = useState<Toast>(null);
+  const closeToast = useCallback(() => setToast(null), []);
+
+  const { data: regions } = useRegions();
+  const { data: themes } = useThemes();
+  const filterGroups = useMemo(
+    () => ({
+      ...FILTER_GROUPS,
+      region: {
+        ...FILTER_GROUPS.region,
+        options: (regions ?? []).map((r) => ({ value: String(r.id), label: r.name })),
+      },
+      theme: {
+        ...FILTER_GROUPS.theme,
+        options: (themes ?? []).map((t) => ({ value: String(t.id), label: t.name })),
+      },
+    }),
+    [regions, themes]
+  );
+
+  const query: TripListFilters = {
+    keyword: searchTerm.trim() || undefined,
+    region_ids: filters.region.map(Number),
+    theme_ids: filters.theme.map(Number),
+    zone: (filters.zone[0] as TripZone | undefined) ?? undefined,
+    trip_type: (filters.kind[0] as TripType | undefined) ?? undefined,
+    publish_status: (filters.status[0] as PublishStatus | undefined) ?? undefined,
+    // Backend bands are 1-5 / 6-10 / 11-15 / 15+; there is no "11+" yet, so use 11-15 for now.
+    duration_band: filters.days[0] === "11+" ? "11-15" : (filters.days[0] ?? undefined),
+    sort: toApiSort(sort),
+    page,
+    limit: pageSize,
+  };
+  const { data: tripPage, isLoading, isError } = useQuery({
+    queryKey: ["trips", query],
+    queryFn: () => tripsApi.list(query),
+    placeholderData: keepPreviousData,
+  });
+  const trips = useMemo(() => (tripPage?.items ?? []).map(toTripRow), [tripPage]);
+  const total = tripPage?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, pageCount);
+
+  const duplicateMutation = useDuplicateTrip();
+  const deleteMutation = useDeleteTrip();
+  const batchMutation = useBatchTrips();
 
   const duplicateTrip = (id: string) => {
-    setAllTrips((prev) => {
-      const source = prev.find((t) => t.id === id);
-      if (!source) return prev;
-      const index = prev.findIndex((t) => t.id === id);
-      const copy: TripRow = {
-        ...source,
-        id: `${source.id}-copy-${Date.now()}`,
-        name: `${source.name}（複製）`,
-        status: "draft",
-        lastEditedLabel: "剛剛",
-        lastEditedMinutesAgo: 0,
-      };
-      const next = [...prev];
-      next.splice(index + 1, 0, copy);
-      return next;
+    duplicateMutation.mutate(id, {
+      onSuccess: (created) =>
+        setToast({ message: `已複製為草稿（${created.trip_code}）`, variant: "success" }),
+      onError: (err) => setToast({ message: apiErrorMessage(err, "複製失敗"), variant: "warning" }),
     });
   };
 
+  const runBatch = (action: "publish" | "unpublish" | "delete", ids: string[]) => {
+    const doneLabel = { publish: "已上架", unpublish: "已下架", delete: "已刪除" }[action];
+    batchMutation.mutate(
+      { trip_ids: ids, action },
+      {
+        onSuccess: () => {
+          setSelectedIds([]);
+          setToast({ message: `${doneLabel} ${ids.length} 筆行程`, variant: "success" });
+        },
+        onError: (err) =>
+          setToast({ message: apiErrorMessage(err, "批次操作失敗"), variant: "warning" }),
+      }
+    );
+  };
+
   const confirmDeleteTrip = () => {
-    if (!pendingDeleteId) return;
-    setAllTrips((prev) => prev.filter((t) => t.id !== pendingDeleteId));
-    setSelectedIds((prev) => prev.filter((sid) => sid !== pendingDeleteId));
-    setPendingDeleteId(null);
+    if (!pendingDelete) return;
+    const { ids } = pendingDelete;
+    setPendingDelete(null);
+    if (ids.length > 1) {
+      runBatch("delete", ids);
+      return;
+    }
+    deleteMutation.mutate(ids[0], {
+      onSuccess: () => {
+        setSelectedIds((prev) => prev.filter((sid) => sid !== ids[0]));
+        setToast({ message: "已刪除行程", variant: "success" });
+      },
+      onError: (err) => setToast({ message: apiErrorMessage(err, "刪除失敗"), variant: "warning" }),
+    });
   };
 
   const toggleSort = (key: SortKey) => {
@@ -98,7 +176,13 @@ export default function TripsTable() {
   }, [pageSizeOpen]);
 
   const setFilterGroup = (key: FilterGroupKey, values: string[]) => {
-    setFilters((prev) => ({ ...prev, [key]: values }));
+    setFilters((prev) => {
+      // The API takes a single value for these groups: keep only the newest pick.
+      const next = SINGLE_VALUE_FILTERS.includes(key)
+        ? values.filter((v) => !prev[key].includes(v)).slice(-1)
+        : values;
+      return { ...prev, [key]: next };
+    });
     setPage(1);
   };
 
@@ -113,41 +197,10 @@ export default function TripsTable() {
     setPage(1);
   };
 
-  const filteredTrips = useMemo(() => {
-    return allTrips.filter((trip) => {
-      if (searchTerm.trim() && !trip.name.toLowerCase().includes(searchTerm.trim().toLowerCase())) {
-        return false;
-      }
-      if (filters.region.length && !filters.region.includes(trip.region)) return false;
-      if (filters.theme.length && !trip.themes.some((t) => filters.theme.includes(t))) return false;
-      if (filters.zone.length && !filters.zone.includes(trip.zone)) return false;
-      if (filters.kind.length && !filters.kind.includes(trip.kind)) return false;
-      if (filters.status.length && !filters.status.includes(trip.status)) return false;
-      if (filters.days.length && !filters.days.some((range) => matchesDaysRange(trip.days, range))) {
-        return false;
-      }
-      return true;
-    });
-  }, [allTrips, filters, searchTerm]);
-
-  const sortedTrips = useMemo(() => {
-    if (!sort) return filteredTrips;
-    const { key, direction } = sort;
-    const factor = direction === "asc" ? 1 : -1;
-    return [...filteredTrips].sort((a, b) => (a[key] - b[key]) * factor);
-  }, [filteredTrips, sort]);
-
-  const pageCount = Math.max(1, Math.ceil(sortedTrips.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const trips = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return sortedTrips.slice(start, start + pageSize);
-  }, [sortedTrips, currentPage, pageSize]);
-
   const chips = useMemo(() => {
     return (Object.keys(filters) as FilterGroupKey[]).flatMap((key) =>
       filters[key].map((value) => {
-        const group = FILTER_GROUPS[key];
+        const group = filterGroups[key];
         const option = group.options.find((o) => o.value === value);
         return {
           key,
@@ -156,7 +209,7 @@ export default function TripsTable() {
         };
       })
     );
-  }, [filters]);
+  }, [filters, filterGroups]);
 
   const allSelected = selectedIds.length > 0 && selectedIds.length === trips.length;
 
@@ -185,18 +238,18 @@ export default function TripsTable() {
                 setPage(1);
               }}
               placeholder="搜尋行程名稱"
-              className="w-full text-[13px] leading-[1.45em] text-[#090909] placeholder:text-[#535F71] focus:outline-none"
+              className="w-full text-[13px] leading-[1.45em] text-[#090909] placeholder:text-[#B4BED1] focus:outline-none"
             />
           </div>
           <FilterDropdown
             label={FILTER_GROUPS.region.label}
-            options={FILTER_GROUPS.region.options}
+            options={filterGroups.region.options}
             selected={filters.region}
             onChange={(values) => setFilterGroup("region", values)}
           />
           <FilterDropdown
             label={FILTER_GROUPS.theme.label}
-            options={FILTER_GROUPS.theme.options}
+            options={filterGroups.theme.options}
             selected={filters.theme}
             onChange={(values) => setFilterGroup("theme", values)}
           />
@@ -255,7 +308,7 @@ export default function TripsTable() {
           ))}
         </div>
         <p className="whitespace-nowrap text-sm font-medium leading-[1.45em] text-[#535F71]">
-          符合條件：{filteredTrips.length} 筆行程
+          符合條件：{total} 筆行程
         </p>
         <div className="flex-1" />
         <button
@@ -283,12 +336,16 @@ export default function TripsTable() {
             <div className="flex-1" />
             <button
               type="button"
+              onClick={() => runBatch("publish", selectedIds)}
+              disabled={batchMutation.isPending}
               className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#E0E3E8] bg-white px-3 py-1.5 text-[11px] font-bold leading-[1.45em] text-[#002366] hover:bg-[#ECF1FA]"
             >
               批次上架
             </button>
             <button
               type="button"
+              onClick={() => runBatch("unpublish", selectedIds)}
+              disabled={batchMutation.isPending}
               className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#E0E3E8] bg-white px-3 py-1.5 text-[11px] font-bold leading-[1.45em] text-[#002366] hover:bg-[#ECF1FA]"
             >
               批次下架
@@ -296,6 +353,9 @@ export default function TripsTable() {
             <div className="h-6 w-px bg-[#E0E3E8]" />
             <button
               type="button"
+              onClick={() =>
+                setPendingDelete({ ids: selectedIds, label: `已選取的 ${selectedIds.length} 筆行程` })
+              }
               className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#D98C8C] bg-white px-3 py-1.5 text-[11px] font-medium leading-[1.45em] text-[#C71A1A] hover:bg-[#FDEDED]"
             >
               刪除
@@ -399,7 +459,7 @@ export default function TripsTable() {
         {trips.length === 0 && (
           <div className="flex items-center justify-center border-t border-[#E0E3E8] px-4 py-10">
             <span className="text-sm font-medium leading-[1.45em] text-[#535F71]">
-              沒有符合條件的行程
+              {isLoading ? "載入中…" : isError ? "行程清單載入失敗" : "沒有符合條件的行程"}
             </span>
           </div>
         )}
@@ -467,7 +527,7 @@ export default function TripsTable() {
               >
                 <RowActionsMenu
                   onDuplicate={() => duplicateTrip(trip.id)}
-                  onDelete={() => setPendingDeleteId(trip.id)}
+                  onDelete={() => setPendingDelete({ ids: [trip.id], label: `「${trip.name}」` })}
                 />
               </div>
             </div>
@@ -548,19 +608,19 @@ export default function TripsTable() {
         </div>
       </div>
 
-      {pendingDeleteId && (
+      {pendingDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="flex w-full max-w-[360px] flex-col gap-4 rounded-2xl bg-white p-6">
             <div className="flex flex-col gap-1.5">
               <h2 className="text-base font-bold leading-[1.45em] text-[#090909]">刪除行程</h2>
               <p className="text-sm font-medium leading-[1.45em] text-[#535F71]">
-                確定要刪除「{allTrips.find((t) => t.id === pendingDeleteId)?.name}」嗎？
+                確定要刪除{pendingDelete.label}嗎？
               </p>
             </div>
             <div className="flex justify-end gap-2.5">
               <button
                 type="button"
-                onClick={() => setPendingDeleteId(null)}
+                onClick={() => setPendingDelete(null)}
                 className="flex h-10 cursor-pointer items-center justify-center rounded-xl border border-[#E0E3E8] bg-white px-4 text-sm font-bold leading-[1.45em] text-[#090909] hover:bg-[#F6F6F6]"
               >
                 取消
@@ -576,6 +636,7 @@ export default function TripsTable() {
           </div>
         </div>
       )}
+      {toast && <AdminToast message={toast.message} variant={toast.variant} onClose={closeToast} />}
     </div>
   );
 }

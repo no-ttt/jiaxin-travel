@@ -8,8 +8,7 @@ import RegionSubcategoriesSection from "@/components/admin/categories/RegionSubc
 import LuxurySubcategoriesSection from "@/components/admin/categories/LuxurySubcategoriesSection";
 import ThemeSubcategoriesSection from "@/components/admin/categories/ThemeSubcategoriesSection";
 
-const SECTION_KEYS = ["sidebar", "region", "luxury", "theme"] as const;
-type SectionKey = (typeof SECTION_KEYS)[number];
+type SectionKey = "sidebar" | "region" | "luxury" | "theme";
 
 export default function AdminCategoriesPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);

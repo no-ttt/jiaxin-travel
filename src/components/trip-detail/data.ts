@@ -4,7 +4,7 @@ export const NORDIC_TRIP: TripDetail = {
   id: "nordic-4",
   title: "北歐四國超值選～挪威峽灣區、縮影高山火車、波羅的海遊輪、峽灣精選飯店13日",
   groupCode: "ENB062013EK6",
-  heroImage: "/images/trip-detail/trip-hero-56586a.png",
+  heroImage: "/images/test/trip-detail/trip-hero-56586a.png",
   durationDays: 13,
   departureCity: "台北",
   tags: ["含稅", "含導覽耳機", "無自費", "贈多項好禮", "含上網卡"],
@@ -78,7 +78,7 @@ export const NORDIC_TRIP: TripDetail = {
         "現場打卡即可獲得專屬好禮-帛琉限定帆布袋乙個(價值台幣400元)，數量有限送完為止。\n註：飯店保留變更、修改、取消本活動內容之權利。",
         "Palau Hotel 座落於享有世界七大潛點盛名的美麗海島國家「帛琉 Palau」的心臟地區：克羅市中心。在這個碧水藍天與細沙茂林的自然環境裡，Palau Hotel還兼具著得天獨厚的人為地理優勢：酒店高層眺望海天相接，洛克群島盡收眼底；下樓正面與帛琉最大的百貨WTCT隔街相望；與羅曼墨圖國際機場也僅有15分鐘的車距。交通便利，景色宜人，絕對是旅遊觀光住宿的不二選擇。",
       ],
-      images: ["/images/trip-detail/hotel-single.png"],
+      images: ["/images/test/trip-detail/hotel-single.png"],
       caption: "詩麗雅號遊輪／圖片僅供行程內容說明。",
     },
     {
@@ -89,9 +89,9 @@ export const NORDIC_TRIP: TripDetail = {
         "挪威縮影高山火車｜麥道爾＋佛萊姆\n1940年八月一日正式通車，通車後立刻躍升為歐洲頂級景觀鐵路。",
       ],
       images: [
-        "/images/trip-detail/transport-1.png",
-        "/images/trip-detail/transport-2.png",
-        "/images/trip-detail/transport-3.png",
+        "/images/test/trip-detail/transport-1.png",
+        "/images/test/trip-detail/transport-2.png",
+        "/images/test/trip-detail/transport-3.png",
       ],
       caption: "含導覽耳機／圖片僅供行程內容說明。",
     },
@@ -124,9 +124,9 @@ export const NORDIC_TRIP: TripDetail = {
     },
   ],
   specGalleryImages: [
-    "/images/trip-detail/transport-2.png",
-    "/images/trip-detail/spec-2.png",
-    "/images/trip-detail/transport-1.png",
+    "/images/test/trip-detail/transport-2.png",
+    "/images/test/trip-detail/spec-2.png",
+    "/images/test/trip-detail/transport-1.png",
   ],
   days: [
     {
@@ -144,7 +144,7 @@ export const NORDIC_TRIP: TripDetail = {
       hotelOptions: ["Quality Hotel Globe", "Quality Hotel Strawberry Arena", "Silja Line面海外艙", "同級旅館"],
       description:
         "被譽為世界最美的都市。此地建於波羅的海和梅拉倫湖之間的島上，市區由二萬多個大大小小的島嶼組成，這種特殊的水上景致，為它贏得北歐威尼斯的美譽。斯德哥爾摩建於十三世紀，後來幾經戰火摧毀，十九世紀後期開始重新整頓，以不破壞自然景觀為原則，此地又以諾貝爾頒獎典禮舉辦地而聞名，加上許多國際性的會議在此舉行，使其成為一座國際性的大都市。",
-      image: "/images/trip-detail/day1-stockholm-56586a2.png",
+      image: "/images/test/trip-detail/day1-stockholm-56586a2.png",
     },
     {
       date: "05/30",
@@ -159,7 +159,7 @@ export const NORDIC_TRIP: TripDetail = {
       hotelOptions: ["Scandic Bergen City", "Clarion Hotel Bergen", "同級旅館"],
       description:
         "卑爾根是挪威第二大城市，也是通往峽灣地區的門戶。城市周圍環繞著七座山丘，木造彩色房屋沿著港口排列，散發濃厚的漢薩同盟時期風情，是探索挪威峽灣風光的最佳起點。",
-      image: "/images/trip-detail/transport-2.png",
+      image: "/images/test/trip-detail/transport-2.png",
     },
   ],
   tipNotice:

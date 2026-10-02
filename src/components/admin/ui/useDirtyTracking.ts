@@ -1,15 +1,22 @@
 import { useEffect, useRef } from "react";
 
 export function useDirtyTracking<T>(value: T, onDirtyChange?: (dirty: boolean) => void, resetKey?: unknown) {
-  const initialRef = useRef(JSON.stringify(value));
+  const serialized = JSON.stringify(value);
+  const initialRef = useRef(serialized);
+  // Latest value/callback, so the reset effect can depend on `resetKey` alone.
+  const latestRef = useRef({ serialized, onDirtyChange });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    initialRef.current = JSON.stringify(value);
-    onDirtyChange?.(false);
+    latestRef.current = { serialized, onDirtyChange };
+  });
+
+  // Resetting (e.g. after save) makes the current value the new clean baseline.
+  useEffect(() => {
+    initialRef.current = latestRef.current.serialized;
+    latestRef.current.onDirtyChange?.(false);
   }, [resetKey]);
 
   useEffect(() => {
-    onDirtyChange?.(JSON.stringify(value) !== initialRef.current);
-  }, [value, onDirtyChange]);
+    onDirtyChange?.(serialized !== initialRef.current);
+  }, [serialized, onDirtyChange]);
 }

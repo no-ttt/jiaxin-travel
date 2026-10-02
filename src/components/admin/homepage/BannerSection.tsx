@@ -1,40 +1,35 @@
 "use client";
 
-import { useState } from "react";
 import AdminSectionCard from "../ui/AdminSectionCard";
 import AdminItemCard from "../ui/AdminItemCard";
 import AdminTextInput from "../ui/AdminTextInput";
 import AdminImageDropzone from "../ui/AdminImageDropzone";
 import AdminAddButton from "../ui/AdminAddButton";
 import { generateId } from "../ui/generateId";
-import { useDirtyTracking } from "../ui/useDirtyTracking";
-import { INITIAL_HOMEPAGE_BANNERS, type BannerItem } from "./data";
+import type { BannerItem } from "./data";
 
 export default function BannerSection({
-  onDirtyChange,
-  resetKey,
+  value: banners,
+  onChange: setBanners,
 }: {
-  onDirtyChange?: (dirty: boolean) => void;
-  resetKey?: unknown;
+  value: BannerItem[];
+  onChange: (updater: (prev: BannerItem[]) => BannerItem[]) => void;
 }) {
-  const [banners, setBanners] = useState<BannerItem[]>(INITIAL_HOMEPAGE_BANNERS);
-  useDirtyTracking(banners, onDirtyChange, resetKey);
-
   const updateBanner = (id: string, patch: Partial<BannerItem>) => {
-    setBanners((prev) => prev.map((banner) => (banner.id === id ? { ...banner, ...patch } : banner)));
+    setBanners((prev) => prev.map((banner) => (banner._id === id ? { ...banner, ...patch } : banner)));
   };
 
   const addBanner = () => {
     setBanners((prev) => [
       ...prev,
-      { id: generateId("banner"), title: "", subtitle: "", linkUrl: "" },
+      { _id: generateId("banner"), title: "", subtitle: "", media_id: null, linkUrl: "" },
     ]);
   };
 
   const duplicateBanner = (index: number) => {
     setBanners((prev) => {
       const target = prev[index];
-      const copy: BannerItem = { ...target, id: generateId("banner") };
+      const copy: BannerItem = { ...target, _id: generateId("banner") };
       return [...prev.slice(0, index + 1), copy, ...prev.slice(index + 1)];
     });
   };
@@ -49,37 +44,42 @@ export default function BannerSection({
   };
 
   const removeBanner = (id: string) => {
-    setBanners((prev) => prev.filter((banner) => banner.id !== id));
+    setBanners((prev) => prev.filter((banner) => banner._id !== id));
   };
 
   return (
     <AdminSectionCard title="首頁 Banner 輪播">
       {banners.map((banner, index) => (
         <AdminItemCard
-          key={banner.id}
+          key={banner._id}
           badge={`Banner ${index + 1}`}
           actions={[
             { label: "複製", onClick: () => duplicateBanner(index) },
             { label: "上移", onClick: () => moveBannerUp(index), disabled: index === 0 },
-            { label: "刪除", onClick: () => removeBanner(banner.id) },
+            { label: "刪除", onClick: () => removeBanner(banner._id) },
           ]}
         >
           <AdminTextInput
             label="主標題"
             value={banner.title}
-            onChange={(value) => updateBanner(banner.id, { title: value })}
+            onChange={(value) => updateBanner(banner._id, { title: value })}
           />
           <AdminTextInput
             label="副標題"
             value={banner.subtitle}
-            onChange={(value) => updateBanner(banner.id, { subtitle: value })}
+            onChange={(value) => updateBanner(banner._id, { subtitle: value })}
           />
           <AdminTextInput
             label="連結網址"
             value={banner.linkUrl}
-            onChange={(value) => updateBanner(banner.id, { linkUrl: value })}
+            onChange={(value) => updateBanner(banner._id, { linkUrl: value })}
           />
-          <AdminImageDropzone fieldLabel="背景圖片" label="新增圖片" />
+          <AdminImageDropzone
+            fieldLabel="背景圖片"
+            label="新增圖片"
+            mediaId={banner.media_id}
+            onChange={(mediaId) => updateBanner(banner._id, { media_id: mediaId })}
+          />
         </AdminItemCard>
       ))}
       <AdminAddButton label="新增橫幅" onClick={addBanner} />

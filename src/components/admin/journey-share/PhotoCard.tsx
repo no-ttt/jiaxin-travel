@@ -38,7 +38,7 @@ export default function PhotoCard({
           value={media.caption}
           placeholder="說明（選填）"
           onChange={(e) => onChange({ caption: e.target.value })}
-          className="w-[125px] bg-transparent text-[11px] leading-[1.45em] text-[#0A0A0C] outline-none placeholder:text-[#535F71]"
+          className="w-[125px] bg-transparent text-[11px] leading-[1.45em] text-[#0A0A0C] outline-none placeholder:text-[#B4BED1]"
         />
       </div>
     </div>

@@ -97,6 +97,33 @@ function TextColorPicker({
   );
 }
 
+/** execCommand("fontSize") levels 2–5 correspond to the FONT_SIZES options (12–18 px). */
+const FONT_SIZE_PX: Record<string, string> = { "2": "12px", "3": "14px", "4": "16px", "5": "18px" };
+
+/**
+ * Rewrites the editor HTML into what the backend sanitizer keeps. It drops <div> and <font>
+ * tags (keeping their text) but allows <p>, <br> and <span style="color|font-size">, while
+ * browsers emit a <div> per line and <font color|size> for the color/size tools.
+ */
+function toSavedHtml(editor: HTMLElement): string {
+  const clone = editor.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll("div").forEach((div) => {
+    const p = document.createElement("p");
+    p.append(...Array.from(div.childNodes));
+    div.replaceWith(p);
+  });
+  clone.querySelectorAll("font").forEach((font) => {
+    const span = document.createElement("span");
+    const color = font.getAttribute("color");
+    const size = font.getAttribute("size");
+    if (color) span.style.color = color;
+    if (size && FONT_SIZE_PX[size]) span.style.fontSize = FONT_SIZE_PX[size];
+    span.append(...Array.from(font.childNodes));
+    font.replaceWith(span);
+  });
+  return clone.innerHTML;
+}
+
 // Uncontrolled contentEditable: renders its initial HTML once and never re-syncs
 // from `value` afterwards, so React reconciliation never clobbers text the user
 // is actively typing. Parent state still receives every change via onChange.
@@ -117,10 +144,12 @@ const EditableSurface = memo(
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
-        onInput={(e) => onInput(e.currentTarget.innerHTML)}
+        onInput={(e) => onInput(toSavedHtml(e.currentTarget))}
+        // New lines become <p> (not the browser-default <div>, which the backend strips).
+        onFocus={() => document.execCommand("defaultParagraphSeparator", false, "p")}
         data-placeholder={placeholder}
         dangerouslySetInnerHTML={{ __html: initialHtml }}
-        className="min-h-[120px] w-full resize-y rounded-b-lg px-4 py-3 text-sm leading-[1.6em] text-[#090909] outline-none empty:before:text-[#535F71] empty:before:content-[attr(data-placeholder)] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+        className="min-h-[120px] w-full resize-y rounded-b-lg px-4 py-3 text-sm leading-[1.6em] text-[#090909] outline-none empty:before:text-[#B4BED1] empty:before:content-[attr(data-placeholder)] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
       />
     );
   },
@@ -155,7 +184,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     editorRef.current?.focus();
     ensureSelectionInEditor();
     document.execCommand(command, false, arg);
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    if (editorRef.current) onChange(toSavedHtml(editorRef.current));
   };
 
   const insertLink = () => {
@@ -172,7 +201,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       // No text selected — createLink on a collapsed caret inserts an
       // invisible zero-width link, so insert visible link text instead.
       document.execCommand("insertHTML", false, `<a href="${url}">${url}</a>`);
-      if (editorRef.current) onChange(editorRef.current.innerHTML);
+      if (editorRef.current) onChange(toSavedHtml(editorRef.current));
       return;
     }
 

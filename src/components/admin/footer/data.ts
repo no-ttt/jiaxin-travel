@@ -1,4 +1,5 @@
 export type BrandInfo = {
+  logoMediaId: string | null;
   nameZh: string;
   nameEn: string;
   legalInfo: string;
@@ -25,6 +26,7 @@ export type CopyrightInfo = {
 };
 
 export const INITIAL_BRAND_INFO: BrandInfo = {
+  logoMediaId: null,
   nameZh: "嘉新旅遊",
   nameEn: "Chia Hsin Travel",
   legalInfo:

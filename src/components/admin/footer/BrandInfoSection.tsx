@@ -21,7 +21,14 @@ export default function BrandInfoSection({
         </p>
       </div>
 
-      <AdminImageDropzone label="上傳圖示" hint="Logo（建議透明背景 PNG）" size="sm" hintPosition="beside" />
+      <AdminImageDropzone
+        label="上傳圖示"
+        hint="Logo（建議透明背景 PNG）"
+        size="sm"
+        hintPosition="beside"
+        mediaId={info.logoMediaId}
+        onChange={(logoMediaId) => onChange({ logoMediaId })}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <AdminTextInput label="品牌名稱（中文）" value={info.nameZh} onChange={(v) => onChange({ nameZh: v })} />

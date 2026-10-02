@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useFooter } from "@/lib/api/hooks/useCms";
 
 const NAV_ITEMS = [{ label: "關於我們", href: "/about" }];
 
@@ -14,6 +15,10 @@ export default function Header({
   onToggleSidebar: () => void;
 }) {
   const headerRef = useRef<HTMLElement>(null);
+  // Contact info is maintained in 網站頁尾設定 (shared cache with <Footer />, no extra request).
+  const { data: footer } = useFooter();
+  const telHref = footer?.phone ? `tel:${footer.phone.replace(/[^\d+]/g, "")}` : undefined;
+  const lineHref = footer?.line_url ?? undefined;
 
   useEffect(() => {
     const header = headerRef.current;
@@ -84,11 +89,13 @@ export default function Header({
       </nav>
 
       <div className="flex shrink-0 items-center gap-3 sm:gap-6">
-        <a href="tel:" aria-label="撥打電話" className="flex h-8 w-8 cursor-pointer items-center justify-center sm:h-10 sm:w-10">
+        <a href={telHref} aria-label="撥打電話" className="flex h-8 w-8 cursor-pointer items-center justify-center sm:h-10 sm:w-10">
           <Image src="/images/phone-call.svg" alt="" width={40} height={40} className="h-full w-full" />
         </a>
         <a
-          href="#"
+          href={lineHref}
+          target="_blank"
+          rel="noopener noreferrer"
           aria-label="LINE 聯絡我們"
           className="hidden h-10 w-10 cursor-pointer items-center justify-center sm:flex"
         >

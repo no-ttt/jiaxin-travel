@@ -1,63 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { generateId } from "@/components/admin/ui/generateId";
 import AdminDateField from "./AdminDateField";
+import AdminSelect from "./AdminSelect";
+import type { EditableFlightRow, EditableFlights } from "./content";
 
-type OvernightStatus = "same-day" | "next-day";
+type FlightRow = EditableFlightRow;
 
-type FlightRow = {
-  id: string;
-  date: string;
-  flightInfo: string;
-  departTime: string;
-  departCity: string;
-  arriveTime: string;
-  overnight: OvernightStatus;
-  arriveCity: string;
-};
-
-const INITIAL_FLIGHTS: FlightRow[] = [
-  {
-    id: generateId("flight"),
-    date: "2027-01-13",
-    flightInfo: "長榮航空 BR087",
-    departTime: "23:05",
-    departCity: "桃園 TPE",
-    arriveTime: "08:00",
-    overnight: "next-day",
-    arriveCity: "巴黎 CDG",
-  },
-  {
-    id: generateId("flight"),
-    date: "2027-01-14",
-    flightInfo: "冰島航空 FI543",
-    departTime: "13:00",
-    departCity: "巴黎 CDG",
-    arriveTime: "15:35",
-    overnight: "same-day",
-    arriveCity: "雷克雅維克 KEF",
-  },
-  {
-    id: generateId("flight"),
-    date: "2027-01-21",
-    flightInfo: "冰島航空 FI542",
-    departTime: "07:45",
-    departCity: "雷克雅維克 KEF",
-    arriveTime: "12:10",
-    overnight: "same-day",
-    arriveCity: "巴黎 CDG",
-  },
-  {
-    id: generateId("flight"),
-    date: "2027-01-22",
-    flightInfo: "長榮航空 BR088",
-    departTime: "11:20",
-    departCity: "巴黎 CDG",
-    arriveTime: "07:20",
-    overnight: "next-day",
-    arriveCity: "桃園 TPE",
-  },
+const DAY_OFFSET_OPTIONS = [
+  { value: 0, label: "當日" },
+  { value: 1, label: "+1" },
 ];
 
 const COLUMN_WIDTHS = {
@@ -86,37 +38,48 @@ function CellInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`h-9 rounded-lg border border-transparent bg-transparent px-2 text-sm font-medium leading-[1.45em] text-[#090909] outline-none placeholder:text-[#535F71] hover:border-[#E0E3E8] focus:border-[#0053E0] focus:bg-white ${className}`}
+      className={`h-9 rounded-lg border border-transparent bg-transparent px-2 text-sm font-medium leading-[1.45em] text-[#090909] outline-none placeholder:text-[#B4BED1] hover:border-[#E0E3E8] focus:border-[#0053E0] focus:bg-white ${className}`}
     />
   );
 }
 
-export default function FlightSection({ title, description }: { title: string; description: string }) {
-  const [note, setNote] = useState(
-    "此為本行程預定航班資訊，實際航班仍以團體確認之航班編號與時間為準。"
-  );
-  const [flights, setFlights] = useState<FlightRow[]>(INITIAL_FLIGHTS);
+export default function FlightSection({
+  title,
+  description,
+  value,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  value: EditableFlights;
+  onChange: (updater: (prev: EditableFlights) => EditableFlights) => void;
+}) {
+  const { note, rows: flights } = value;
+  const setNote = (next: string) => onChange((prev) => ({ ...prev, note: next }));
+  const setFlights = (updater: (prev: FlightRow[]) => FlightRow[]) =>
+    onChange((prev) => ({ ...prev, rows: updater(prev.rows) }));
 
   const updateFlight = (id: string, patch: Partial<FlightRow>) => {
-    setFlights((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+    setFlights((prev) => prev.map((f) => (f._id === id ? { ...f, ...patch } : f)));
   };
 
   const removeFlight = (id: string) => {
-    setFlights((prev) => prev.filter((f) => f.id !== id));
+    setFlights((prev) => prev.filter((f) => f._id !== id));
   };
 
   const addFlight = () => {
     setFlights((prev) => [
       ...prev,
       {
-        id: generateId("flight"),
-        date: "",
-        flightInfo: "",
-        departTime: "",
-        departCity: "",
-        arriveTime: "",
-        overnight: "same-day",
-        arriveCity: "",
+        _id: generateId("flight"),
+        flight_date: "",
+        airline_flight: "",
+        depart_time: "",
+        depart_city: "",
+        arrive_time: "",
+        day_offset: 0,
+        arrive_city: "",
+        leg_label: null,
       },
     ]);
   };
@@ -179,63 +142,57 @@ export default function FlightSection({ title, description }: { title: string; d
           )}
 
           {flights.map((flight) => (
-            <div key={flight.id} className="flex items-center gap-2 border-t border-[#E0E3E8] px-3 py-2">
+            <div key={flight._id} className="flex items-center gap-2 border-t border-[#E0E3E8] px-3 py-2">
               <div className={COLUMN_WIDTHS.date}>
                 <AdminDateField
-                  value={flight.date}
-                  onChange={(v) => updateFlight(flight.id, { date: v })}
+                  value={flight.flight_date}
+                  onChange={(v) => updateFlight(flight._id, { flight_date: v })}
                   size="compact"
                 />
               </div>
               <CellInput
-                value={flight.flightInfo}
-                onChange={(v) => updateFlight(flight.id, { flightInfo: v })}
+                value={flight.airline_flight}
+                onChange={(v) => updateFlight(flight._id, { airline_flight: v })}
                 placeholder="長榮航空 BR087"
                 className={COLUMN_WIDTHS.flight}
               />
               <CellInput
-                value={flight.departTime}
-                onChange={(v) => updateFlight(flight.id, { departTime: v })}
+                value={flight.depart_time}
+                onChange={(v) => updateFlight(flight._id, { depart_time: v })}
                 placeholder="23:05"
                 className={COLUMN_WIDTHS.time}
               />
               <CellInput
-                value={flight.departCity}
-                onChange={(v) => updateFlight(flight.id, { departCity: v })}
+                value={flight.depart_city}
+                onChange={(v) => updateFlight(flight._id, { depart_city: v })}
                 placeholder="桃園 TPE"
                 className={COLUMN_WIDTHS.city}
               />
               <CellInput
-                value={flight.arriveTime}
-                onChange={(v) => updateFlight(flight.id, { arriveTime: v })}
+                value={flight.arrive_time}
+                onChange={(v) => updateFlight(flight._id, { arrive_time: v })}
                 placeholder="08:00"
                 className={COLUMN_WIDTHS.time}
               />
-              <button
-                type="button"
-                onClick={() =>
-                  updateFlight(flight.id, {
-                    overnight: flight.overnight === "same-day" ? "next-day" : "same-day",
-                  })
-                }
-                className={`flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-sm font-medium leading-[1.45em] transition ${COLUMN_WIDTHS.overnight} ${
-                  flight.overnight === "next-day"
-                    ? "bg-[#ECF1FA] text-[#0053E0]"
-                    : "text-[#090909] hover:bg-[#FAFAFA]"
-                }`}
-              >
-                {flight.overnight === "next-day" ? "+1" : "當日"}
-              </button>
+              <div className={`shrink-0 ${COLUMN_WIDTHS.overnight}`}>
+                <AdminSelect
+                  size="compact"
+                  ariaLabel="跨日"
+                  options={DAY_OFFSET_OPTIONS.map((option) => option.label)}
+                  value={flight.day_offset > 0 ? "+1" : "當日"}
+                  onChange={(label) => updateFlight(flight._id, { day_offset: label === "+1" ? 1 : 0 })}
+                />
+              </div>
               <CellInput
-                value={flight.arriveCity}
-                onChange={(v) => updateFlight(flight.id, { arriveCity: v })}
+                value={flight.arrive_city}
+                onChange={(v) => updateFlight(flight._id, { arrive_city: v })}
                 placeholder="巴黎 CDG"
                 className={COLUMN_WIDTHS.arriveCity}
               />
               <div className="flex flex-1 items-center justify-center">
                 <button
                   type="button"
-                  onClick={() => removeFlight(flight.id)}
+                  onClick={() => removeFlight(flight._id)}
                   aria-label="刪除航班"
                   className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#C71A1A] hover:bg-[#FDEDED]"
                 >

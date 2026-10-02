@@ -46,9 +46,12 @@ export default function JourneyAlbumOverlay({
   const album = story?.album ?? (story ? [{ image: story.image, title: story.title, description: story.quote }] : []);
   const isOpen = story !== null;
 
-  useEffect(() => {
+  // Start from the first photo whenever a different story opens.
+  const [prevStory, setPrevStory] = useState(story);
+  if (story !== prevStory) {
+    setPrevStory(story);
     if (story) setActiveIndex(0);
-  }, [story]);
+  }
 
   const goPrev = () => setActiveIndex((i) => (i - 1 + album.length) % album.length);
   const goNext = () => setActiveIndex((i) => (i + 1) % album.length);

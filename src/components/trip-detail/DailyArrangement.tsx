@@ -10,10 +10,6 @@ const LEGEND: { type: StopType; label: string; icon: string }[] = [
   { type: "pass", label: "行車經過", icon: "/images/trip-detail/legend-pass.svg" },
 ];
 
-const LEGEND_ICON: Record<StopType, string> = Object.fromEntries(
-  LEGEND.map((l) => [l.type, l.icon]),
-) as Record<StopType, string>;
-
 function MealRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-3">
@@ -42,8 +38,8 @@ function DayCard({ day }: { day: DayPlan }) {
                   <path d="M0 0 L8 6.5 L0 13 Z" />
                 </svg>
               )}
-              <Image src={LEGEND_ICON[stop.type]} alt="" width={16} height={16} />
-              <span className="text-lg text-black">{stop.name}</span>
+              {/* Design: each stop chip has 12px horizontal padding around the separators. */}
+              <span className="px-3 text-lg text-black">{stop.name}</span>
             </span>
           ))}
         </div>
@@ -80,9 +76,11 @@ function DayCard({ day }: { day: DayPlan }) {
 
         <div className="flex flex-col-reverse gap-5 pl-0 sm:flex-row sm:pl-8">
           <p className="flex-1 text-base leading-relaxed text-[#4A5058]">{day.description}</p>
-          <div className="relative h-[187px] w-full shrink-0 overflow-hidden rounded-[10px] sm:w-[280px]">
-            <Image src={day.image} alt="" fill className="object-cover" />
-          </div>
+          {day.image && (
+            <div className="relative h-[187px] w-full shrink-0 overflow-hidden rounded-[10px] sm:w-[280px]">
+              <Image src={day.image} alt="" fill className="object-cover" />
+            </div>
+          )}
         </div>
       </div>
     </div>

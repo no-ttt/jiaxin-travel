@@ -14,8 +14,12 @@ export type FeatureBlock = {
   id: string;
   title: string;
   paragraphs: string[];
+  /** Rich-text body from the admin editor; rendered instead of `paragraphs` when present. */
+  bodyHtml?: string;
   images: string[];
   caption: string;
+  /** Per-image captions (same order as `images`); shown with the active slide when present. */
+  captions?: string[];
 };
 
 export type SpecItem = {
@@ -69,4 +73,16 @@ export type TripDetail = {
   tipNotice: string;
   reminders: string[];
   ageReminderItems: string[];
+  /** Notice tabs from the API (visible ones only); replaces the built-in placeholder tabs when present. */
+  noticeTabs?: { title: string; bodyHtml: string }[];
+  /** External-link trips send the CTA to the partner site instead of the inquiry form. */
+  externalUrl?: string | null;
+  /** 封面主標題 shown as the page heading; falls back to `title` (product name). */
+  coverHeadline?: string;
+  /** 後台「航程備註」; replaces the default disclaimer under 航程資訊 when present. */
+  flightNote?: string;
+  /** SEO / browser-tab title (後台「標題」). */
+  seoTitle?: string;
+  /** e.g. "TWD"; the mock data has none. */
+  currency?: string;
 };

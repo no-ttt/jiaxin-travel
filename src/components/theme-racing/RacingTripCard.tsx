@@ -5,7 +5,7 @@ import type { RacingTrip } from "./data";
 export default function RacingTripCard({ trip }: { trip: RacingTrip }) {
   return (
     <Link
-      href={`/search/${trip.id}`}
+      href={`/trips/${trip.id}`}
       className="flex w-full flex-col overflow-hidden rounded-2xl bg-[#14111A] shadow-[0px_10px_28px_0px_rgba(8,28,58,0.07)]"
     >
       <div className="relative h-64 w-full shrink-0">

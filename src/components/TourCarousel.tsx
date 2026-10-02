@@ -3,43 +3,67 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { priceAffixes } from "@/lib/currency";
 
 export type Tour = {
   id: string;
-  image: string;
+  image: string | null;
   title: string;
   description: string;
   price: string;
+  /** Trip currency from the API (e.g. "TWD"); drives the price prefix/suffix. */
+  currency?: string | null;
+  /** External-link trips open the partner site in a new tab instead of the detail page. */
+  externalUrl?: string | null;
 };
 
 function TourCard({ tour }: { tour: Tour }) {
+  const { prefix, suffix } = priceAffixes(tour.currency);
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_4px_16px_0px_rgba(8,28,58,0.12)]">
       <div className="relative h-[180px] w-full sm:h-[256px]">
-        <Image
-          src={tour.image}
-          alt={tour.title}
-          fill
-          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-          className="object-cover"
-        />
+        {tour.image ? (
+          <Image
+            src={tour.image}
+            alt={tour.title}
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#E0E3E8] text-sm text-[#94969C]">
+            無圖片
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-3 px-5 py-5">
         <h3 className="text-lg font-medium text-[#1A1C1E]">{tour.title}</h3>
         <p className="flex-1 text-sm leading-relaxed text-[#5B6574]">{tour.description}</p>
         <div className="flex items-center justify-between border-t border-[#C3C6D6] pt-3">
           <div className="flex items-end gap-1">
-            <span className="text-[13px] text-[#002366]">TWD </span>
+            <span className="text-[13px] text-[#002366]">{prefix} </span>
             <span className="text-2xl font-semibold text-[#0053E0]">{tour.price}</span>
-            <span className="text-[13px] text-[#002366]">元起</span>
+            <span className="text-[13px] text-[#002366]">{suffix}</span>
           </div>
-          <Link
-            href={`/search/${tour.id}`}
-            className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#002366]"
-          >
-            詳情
-            <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} />
-          </Link>
+          {tour.externalUrl ? (
+            <a
+              href={tour.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#002366]"
+            >
+              詳情
+              <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} />
+            </a>
+          ) : (
+            <Link
+              href={`/trips/${tour.id}`}
+              className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#002366]"
+            >
+              詳情
+              <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} />
+            </Link>
+          )}
         </div>
       </div>
     </div>
@@ -93,11 +117,38 @@ export default function TourCarousel({
   const cardsPerPage = useCardsPerPage();
   const pages = chunk(tours, cardsPerPage);
   const pageCount = pages.length;
+  const isEmpty = tours.length === 0;
+
+  // Back to the first page whenever the layout changes: reset state during render,
+  // and only sync the scroll position (a DOM side effect) in the effect.
+  const [prevCardsPerPage, setPrevCardsPerPage] = useState(cardsPerPage);
+  if (cardsPerPage !== prevCardsPerPage) {
+    setPrevCardsPerPage(cardsPerPage);
+    setActivePage(0);
+  }
 
   useEffect(() => {
-    setActivePage(0);
+    if (isEmpty) return;
     scrollerRef.current?.scrollTo({ left: 0 });
-  }, [cardsPerPage]);
+  }, [cardsPerPage, isEmpty]);
+
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col items-center gap-6">
+        <div className="flex w-full items-end gap-2">
+          <div className="flex flex-1 flex-col gap-2">
+            <span className="text-sm font-bold uppercase tracking-[0.15em] text-[#0053E0]">
+              {eyebrow}
+            </span>
+            <h2 className="font-serif text-3xl font-bold text-[#1A1C1E] sm:text-[32px]">{title}</h2>
+          </div>
+        </div>
+        <p className="w-full rounded-2xl border border-dashed border-[#C3C6D6] py-12 text-center text-sm text-[#B45309]">
+          尚無行程資料
+        </p>
+      </div>
+    );
+  }
 
   const getPageEl = (scroller: HTMLDivElement, index: number) =>
     scroller.querySelector<HTMLElement>(`[data-page="${index}"]`);

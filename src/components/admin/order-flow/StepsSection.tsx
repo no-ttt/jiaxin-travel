@@ -130,7 +130,9 @@ export default function StepsSection({
 
           <div className="flex flex-col gap-[7px]">
             <span className="text-[13px] font-medium leading-[1.45em] text-[#090909]">內容</span>
+            {/* Keyed by step: the editor only reads its initial value, so remount when switching steps. */}
             <RichTextEditor
+              key={activeStep.id}
               value={activeStep.content}
               onChange={(html) => updateStep(activeStep.id, { content: html })}
               placeholder="輸入前台「訂購流程」此步驟要展示的內容。可使用段落、清單與連結。"

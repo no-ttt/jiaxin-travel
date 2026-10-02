@@ -1,4 +1,12 @@
+"use client";
+
+import { useFooter } from "@/lib/api/hooks/useCms";
+
 export default function ServiceCta() {
+  // Phone / LINE are maintained in 網站頁尾設定 (same source as the header buttons).
+  const { data: footer } = useFooter();
+  const telHref = footer?.phone ? `tel:${footer.phone.replace(/[^\d+]/g, "")}` : undefined;
+
   return (
     <div className="flex flex-col items-start justify-between gap-6 rounded-[20px] border border-[#E0E3E8] bg-gradient-to-r from-[#EDF5FF] to-[#FBF9F2] px-6 py-6 sm:flex-row sm:items-center sm:px-9 sm:py-6">
       <div className="flex max-w-[652px] flex-col gap-2">
@@ -12,13 +20,15 @@ export default function ServiceCta() {
       </div>
       <div className="flex w-full gap-2.5 sm:w-auto">
         <a
-          href="tel:"
+          href={telHref}
           className="flex h-[46px] flex-1 cursor-pointer items-center justify-center rounded-[11px] border border-[#C3C6D6] bg-white px-4 text-[13px] font-bold text-[#002366] transition hover:bg-slate-50 sm:flex-none sm:px-6"
         >
           電話諮詢
         </a>
         <a
-          href="#"
+          href={footer?.line_url ?? undefined}
+          target="_blank"
+          rel="noopener noreferrer"
           className="flex h-[46px] flex-1 cursor-pointer items-center justify-center rounded-[11px] bg-[#0053E0] px-4 text-[13px] font-bold text-white transition hover:bg-[#0044b8] sm:flex-none sm:px-6"
         >
           LINE 詢問行程

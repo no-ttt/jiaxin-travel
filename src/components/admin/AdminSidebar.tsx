@@ -2,11 +2,43 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/api/auth-context";
+import { useCreateTrip } from "@/lib/api/hooks/useTrips";
+import { generateTripCode } from "./trips/form";
 import { ADMIN_NAV_ITEMS } from "./nav-items";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const createTrip = useCreateTrip();
+
+  const handleCreateTrip = () => {
+    createTrip.mutate(
+      { trip_code: generateTripCode(), trip_type: "own", product_name: "" },
+      {
+        onSuccess: (created) => router.push(`/admin/dashboard/trips/${created.id}`),
+        onError: () => window.alert("新增行程失敗，請稍後再試"),
+      }
+    );
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      // Local session is cleared by logout() even if the API call fails.
+    } finally {
+      queryClient.clear();
+      router.replace("/admin/login");
+    }
+  };
 
   return (
     <aside className="sticky top-0 flex h-screen w-[268px] shrink-0 flex-col gap-7 overflow-y-auto border-r border-[#E0E3E8] bg-[#F6F6F6] px-8 py-[30px]">
@@ -49,6 +81,8 @@ export default function AdminSidebar() {
 
       <button
         type="button"
+        onClick={handleCreateTrip}
+        disabled={createTrip.isPending}
         className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-[#DBE8FF] py-3.5 text-[15px] font-bold leading-[1.4em] text-[#0053E0] transition hover:bg-[#B4BED1]"
       >
         <span className="text-lg leading-none">＋</span>
@@ -60,10 +94,12 @@ export default function AdminSidebar() {
       <div className="flex flex-col gap-1">
         <button
           type="button"
-          className="flex h-10 cursor-pointer items-center gap-2.5 rounded-[10px] pl-3 text-left text-sm font-medium leading-[1.4em] text-[#535F71] transition hover:bg-[#ECF1FA]"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="flex h-10 cursor-pointer items-center gap-2.5 rounded-[10px] pl-3 text-left text-sm font-medium leading-[1.4em] text-[#535F71] transition hover:bg-[#ECF1FA] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Image src="/images/admin/icon-logout.svg" alt="" width={20} height={20} />
-          登出
+          {isLoggingOut ? "登出中…" : "登出"}
         </button>
       </div>
 
@@ -72,7 +108,9 @@ export default function AdminSidebar() {
           最後更新：2026/06/01 14:35
         </p>
         <p className="text-[11px] font-medium leading-[1.4em] text-[#090909]">
-          Admin User · ID 08844
+          {user?.display_name ?? "Admin User"}
+          {/* staff_code already includes its "ID " prefix, e.g. "ID 00003" */}
+          {user?.staff_code ? ` · ${user.staff_code}` : ""}
         </p>
       </div>
     </aside>

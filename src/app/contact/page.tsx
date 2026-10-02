@@ -7,12 +7,15 @@ import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
 import FloatingActions from "@/components/FloatingActions";
 import ContactForm from "@/components/contact/ContactForm";
-import { getTripDetail } from "@/components/trip-detail/data";
+import { toTripDetail } from "@/components/trip-detail/fromApi";
+import { usePublicTrip } from "@/lib/api/hooks/useTrips";
 
 function ContactPageContent() {
   const searchParams = useSearchParams();
+  // tripId is the trip code passed by the detail page's 立即洽詢 button.
   const tripId = searchParams.get("tripId");
-  const trip = tripId ? getTripDetail(tripId) : null;
+  const { data } = usePublicTrip(tripId);
+  const trip = data ? toTripDetail(data) : null;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (

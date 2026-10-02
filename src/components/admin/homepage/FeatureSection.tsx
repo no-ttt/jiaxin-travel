@@ -1,25 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import AdminSectionCard from "../ui/AdminSectionCard";
 import AdminTextInput from "../ui/AdminTextInput";
 import AdminTextarea from "../ui/AdminTextarea";
 import AdminImageDropzone from "../ui/AdminImageDropzone";
-import { useDirtyTracking } from "../ui/useDirtyTracking";
-import { HOMEPAGE_FEATURES, type FeatureCard } from "./data";
+import type { FeatureCard } from "./data";
 
 export default function FeatureSection({
-  onDirtyChange,
-  resetKey,
+  value: features,
+  onChange: setFeatures,
 }: {
-  onDirtyChange?: (dirty: boolean) => void;
-  resetKey?: unknown;
+  value: FeatureCard[];
+  onChange: (updater: (prev: FeatureCard[]) => FeatureCard[]) => void;
 }) {
-  const [features, setFeatures] = useState<FeatureCard[]>(HOMEPAGE_FEATURES);
-  useDirtyTracking(features, onDirtyChange, resetKey);
-
   const updateFeature = (id: string, patch: Partial<FeatureCard>) => {
-    setFeatures((prev) => prev.map((feature) => (feature.id === id ? { ...feature, ...patch } : feature)));
+    setFeatures((prev) => prev.map((feature) => (feature._id === id ? { ...feature, ...patch } : feature)));
   };
 
   return (
@@ -29,18 +24,27 @@ export default function FeatureSection({
     >
       <div className="flex flex-col gap-6 sm:flex-row">
         {features.map((feature) => (
-          <div key={feature.id} className="flex flex-1 flex-col gap-3.5">
-            <AdminImageDropzone label="上傳圖示" hint="SVG / PNG" size="sm" hintPosition="beside" />
+          <div key={feature._id} className="flex flex-1 flex-col gap-3.5">
+            <AdminImageDropzone
+              label="上傳圖示"
+              hint="SVG / PNG"
+              size="sm"
+              hintPosition="beside"
+              purpose="icon"
+              accept="image/svg+xml,image/png"
+              mediaId={feature.icon_media_id}
+              onChange={(icon_media_id) => updateFeature(feature._id, { icon_media_id })}
+            />
             <AdminTextInput
               label="標題"
               value={feature.title}
-              onChange={(value) => updateFeature(feature.id, { title: value })}
+              onChange={(value) => updateFeature(feature._id, { title: value })}
             />
             <AdminTextarea
               label="說明文字"
               value={feature.description}
               rows={4}
-              onChange={(value) => updateFeature(feature.id, { description: value })}
+              onChange={(value) => updateFeature(feature._id, { description: value })}
             />
           </div>
         ))}

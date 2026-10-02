@@ -86,9 +86,12 @@ export default function ServiceDetailDrawer({
 }) {
   const [activeTab, setActiveTab] = useState<DrawerTab>("documents");
 
-  useEffect(() => {
+  // Open each service on the documents tab.
+  const [prevRow, setPrevRow] = useState(row);
+  if (row !== prevRow) {
+    setPrevRow(row);
     if (row) setActiveTab("documents");
-  }, [row]);
+  }
 
   useEffect(() => {
     if (!row) return;

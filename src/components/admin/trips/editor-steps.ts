@@ -51,3 +51,6 @@ export const EDITOR_STEPS: EditorStep[] = [
     description: "預設四個分頁，可自行新增、刪除、排序與控制前台顯示。",
   },
 ];
+
+/** Steps 03–05 only apply to own (自建) trips; external-link trips hide them. */
+export const OWN_TRIP_ONLY_STEPS: EditorStepKey[] = ["highlights", "flights", "itinerary"];

@@ -6,8 +6,18 @@ import { useState } from "react";
 const SLIDE_WIDTH = 600;
 const GAP = 12;
 
-export default function ImageCarousel({ images, caption }: { images: string[]; caption: string }) {
+export default function ImageCarousel({
+  images,
+  caption,
+  captions,
+}: {
+  images: string[];
+  caption: string;
+  /** Per-image captions; the active slide's caption replaces `caption` when provided. */
+  captions?: string[];
+}) {
   const [index, setIndex] = useState(0);
+  const activeCaption = captions ? (captions[index] ?? "") : caption;
 
   if (images.length === 1) {
     return (
@@ -15,7 +25,7 @@ export default function ImageCarousel({ images, caption }: { images: string[]; c
         <div className="relative h-[400px] w-[600px] max-w-full overflow-hidden rounded-2xl">
           <Image src={images[0]} alt="" fill className="object-cover" />
         </div>
-        <p className="text-[13px] text-[#535F71]">{caption}</p>
+        {activeCaption && <p className="text-[13px] text-[#535F71]">{activeCaption}</p>}
       </div>
     );
   }
@@ -70,7 +80,7 @@ export default function ImageCarousel({ images, caption }: { images: string[]; c
           </span>
         </div>
       </div>
-      <p className="text-[13px] text-[#535F71]">{caption}</p>
+      {activeCaption && <p className="text-[13px] text-[#535F71]">{activeCaption}</p>}
     </div>
   );
 }
