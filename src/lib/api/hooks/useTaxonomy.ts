@@ -1,6 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { taxonomyApi } from "../endpoints/taxonomy";
-import type { ThemeIn } from "../types/taxonomy";
 
 export function useRegions() {
   return useQuery({ queryKey: ["taxonomy", "regions"], queryFn: taxonomyApi.listRegions });
@@ -28,10 +27,5 @@ export function useNavCategories() {
   });
 }
 
-export function useCreateTheme() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: ThemeIn) => taxonomyApi.createTheme(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["taxonomy", "themes"] }),
-  });
-}
+/** Every taxonomy list (nav categories, regions, themes, …) shares this prefix. */
+export const TAXONOMY_KEY = ["taxonomy"] as const;

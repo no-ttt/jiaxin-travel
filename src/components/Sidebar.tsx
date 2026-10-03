@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { buildSearchHref, themeCollectionHref } from "@/components/search/searchUrl";
 import { useNavigation } from "@/lib/api/hooks/useCms";
 import type { NavCategoryPublic, NavRegion, NavTheme } from "@/lib/api/types/cms";
 
@@ -10,12 +12,16 @@ function flyoutOptionsFor(
   categoryKey: string,
   regions: NavRegion[],
   themes: NavTheme[],
-): { label: string; href?: string }[] {
+): { label: string; href: string }[] {
   if (categoryKey === "overseas_group") {
-    return regions.map((region) => ({ label: region.name }));
+    // The search page turns a destination that names a region into a region filter.
+    return regions.map((region) => ({
+      label: region.name,
+      href: buildSearchHref({ destination: region.name, zone: "overseas_group" }),
+    }));
   }
   if (categoryKey === "theme_travel") {
-    return themes.map((theme) => ({ label: theme.name }));
+    return themes.map((theme) => ({ label: theme.name, href: themeCollectionHref(theme.id) }));
   }
   return [];
 }
@@ -144,13 +150,14 @@ export default function Sidebar({
                     {options.length > 0 ? (
                       <div className="grid grid-cols-4 gap-x-16 gap-y-6">
                         {options.map((option) => (
-                          <a
+                          <Link
                             key={option.label}
-                            href={option.href ?? "#"}
+                            href={option.href}
+                            onClick={onClose}
                             className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-base text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-slate-50 hover:text-[#0053E0]"
                           >
                             {option.label}
-                          </a>
+                          </Link>
                         ))}
                       </div>
                     ) : (
@@ -163,13 +170,14 @@ export default function Sidebar({
                   <div className="mb-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 md:hidden">
                     {options.length > 0 ? (
                       options.map((option) => (
-                        <a
+                        <Link
                           key={option.label}
-                          href={option.href ?? "#"}
+                          href={option.href}
+                          onClick={onClose}
                           className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-sm text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-white hover:text-[#0053E0]"
                         >
                           {option.label}
-                        </a>
+                        </Link>
                       ))
                     ) : (
                       <span className="col-span-2 px-3 py-2.5 text-sm text-[#94969C]">尚無子選項</span>

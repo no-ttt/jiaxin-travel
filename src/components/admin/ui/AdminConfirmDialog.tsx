@@ -2,6 +2,7 @@
 
 type AdminConfirmDialogProps = {
   title: string;
+  /** Line breaks (\n) are kept. */
   message: string;
   confirmLabel?: string;
   /** Pass null to show only the confirm button (e.g. a required action). */
@@ -31,7 +32,7 @@ export default function AdminConfirmDialog({
           <h2 id="admin-confirm-title" className="text-base font-bold leading-[1.45em] text-[#090909]">
             {title}
           </h2>
-          <p className="text-sm font-medium leading-[1.45em] text-[#535F71]">{message}</p>
+          <p className="whitespace-pre-line text-sm font-medium leading-[1.45em] text-[#535F71]">{message}</p>
         </div>
         <div className="flex justify-end gap-2.5">
           {cancelLabel !== null && (

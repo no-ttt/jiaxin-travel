@@ -1,33 +1,39 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useCollectionTripSearch } from "@/lib/api/hooks/useCollections";
+import type { CollectionTrip } from "@/lib/api/types/collection";
 import AdminInfoNote from "../ui/AdminInfoNote";
 import AdminSectionCard from "../ui/AdminSectionCard";
-import TripRow from "./TripRow";
-import { SEARCHABLE_TRIPS, type ThemeCollectionTrip } from "./data";
+import TripRow, { TripPrice, TripThumbnail } from "./TripRow";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function TripsSection({
+  collectionId,
   trips,
   onTripsChange,
 }: {
-  trips: ThemeCollectionTrip[];
-  onTripsChange: (trips: ThemeCollectionTrip[]) => void;
+  collectionId: number;
+  trips: CollectionTrip[];
+  onTripsChange: (trips: CollectionTrip[]) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
 
-  const results = useMemo(() => {
-    if (!query.trim()) return [];
-    const addedIds = new Set(trips.map((trip) => trip.id));
-    return SEARCHABLE_TRIPS.filter(
-      (trip) =>
-        !addedIds.has(trip.id) &&
-        (trip.title.includes(query) || trip.code.toLowerCase().includes(query.toLowerCase()))
-    );
-  }, [query, trips]);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
 
-  const addTrip = (trip: ThemeCollectionTrip) => {
+  const search = useCollectionTripSearch(collectionId, debouncedQuery);
+  const addedIds = new Set(trips.map((trip) => trip.id));
+  const results = (search.data ?? []).filter((trip) => !addedIds.has(trip.id));
+  const isSearching = query.trim() !== "" && (query !== debouncedQuery || search.isFetching);
+
+  const addTrip = (trip: CollectionTrip) => {
     onTripsChange([...trips, trip]);
     setQuery("");
   };
@@ -69,23 +75,27 @@ export default function TripsSection({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="輸入團號或團名搜尋"
-          className="h-11 w-[964px] rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
+          className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
         />
       </div>
 
+      {query.trim() !== "" && results.length === 0 && (
+        <p className="text-[13px] leading-[1.45em] text-[#535F71]">
+          {isSearching ? "搜尋中…" : search.isError ? "搜尋失敗，請稍後再試" : "查無符合的已上架行程"}
+        </p>
+      )}
+
       {results.length > 0 && (
-        <div className="flex w-[964px] flex-col overflow-hidden rounded-xl border border-[#E0E3E8] bg-white shadow-[0px_6px_16px_0px_rgba(0,0,0,0.08)]">
+        <div className="flex w-full flex-col overflow-hidden rounded-xl border border-[#E0E3E8] bg-white shadow-[0px_6px_16px_0px_rgba(0,0,0,0.08)]">
           {results.map((trip) => (
-            <div key={trip.id} className="flex w-[964px] items-center gap-3 px-4 py-3">
-              <div className="h-11 w-11 shrink-0 rounded-lg bg-[#E0E3E8]" />
+            <div key={trip.id} className="flex w-full items-center gap-3 px-4 py-3">
+              <TripThumbnail url={trip.thumbnail} className="h-11 w-11 rounded-lg" />
               <div className="flex flex-1 flex-col gap-1">
-                <span className="text-sm font-bold leading-[1.45em] text-[#090909]">{trip.title}</span>
+                <span className="text-sm font-bold leading-[1.45em] text-[#090909]">{trip.product_name}</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs leading-[1.45em] text-[#535F71]">{trip.code}</span>
+                  <span className="text-xs leading-[1.45em] text-[#535F71]">{trip.trip_code}</span>
                   <span className="text-xs leading-[1.45em] text-[#E0E3E8]">｜</span>
-                  <span className="text-[13px] font-medium leading-[1.45em] text-[#0053E0]">
-                    {trip.priceFrom}
-                  </span>
+                  <TripPrice trip={trip} />
                 </div>
               </div>
               <button

@@ -1,3 +1,7 @@
+import type { Media } from "./media";
+import type { PublicTripCard } from "./trip";
+
+/** PATCH /admin/collections/{id}. Colors must match ^#[0-9A-Fa-f]{6}$. */
 export type CollectionUpdate = Partial<{
   title: string | null;
   subtitle: string | null;
@@ -15,15 +19,51 @@ export type ReorderIn = {
   trip_ids: string[];
 };
 
-/** Provisional read model — see note in trip.ts about untyped backend responses. */
-export type Collection = {
+/** A trip as shown in the admin collection editor (added list and search results). */
+export type CollectionTrip = {
   id: string;
-  slug: string;
-  title: string;
-  subtitle?: string;
-  tag_text?: string;
-  theme_color?: string;
-  button_color?: string;
-  hero_media_id?: string | null;
-  trip_ids: string[];
+  trip_code: string;
+  product_name: string;
+  price_from: number | null;
+  currency: string;
+  thumbnail: string | null;
 };
+
+/**
+ * Admin read model, normalized by `toCollection` in endpoints/collections.ts. GET
+ * /admin/collections/{id} (confirmed) returns id, kind, title, subtitle, tag_text, theme_color,
+ * button_color, hero (Media | null), items and last_updated.
+ */
+export type Collection = {
+  id: number;
+  slug: string;
+  kind: string;
+  title: string;
+  subtitle: string;
+  tag_text: string;
+  theme_color: string | null;
+  button_color: string | null;
+  hero_media_id: string | null;
+  hero: Media | null;
+  trips: CollectionTrip[];
+};
+
+/** GET /public/collections/{slug} (confirmed). */
+export type PublicCollection = {
+  slug: string;
+  kind: string;
+  title: string;
+  subtitle: string;
+  tag_text: string;
+  theme_color: string | null;
+  button_color: string | null;
+  hero: Media | null;
+  total: number;
+  page: number;
+  items: PublicTripCard[];
+};
+
+export type PublicCollectionParams = Partial<{
+  page: number;
+  limit: number;
+}>;

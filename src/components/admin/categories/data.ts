@@ -1,62 +1,149 @@
-export type SidebarCategory = {
-  id: string;
-  name: string;
+import type { NavCategory, Region, Theme } from "@/lib/api/types/taxonomy";
+import { generateId } from "../ui/generateId";
+
+/** API length limits: nav category display_name 1–20, region/theme name 1–30. */
+export const CATEGORY_NAME_MAX = 20;
+export const SUBCATEGORY_NAME_MAX = 30;
+
+export const isValidName = (name: string, max: number) => {
+  const trimmed = name.trim();
+  return trimmed.length > 0 && trimmed.length <= max;
+};
+
+/** Hint beside the submenu toggle, per category key. */
+export const SUBMENU_NOTES: Record<string, { enabled: string; disabled: string }> = {
+  overseas_group: {
+    enabled: "已啟用，地區子分類請於下方「國外團體地區子分類名稱」區塊編輯。",
+    disabled: "如需改用子選單，開啟後地區子分類請於下方「國外團體地區子分類名稱」區塊編輯。",
+  },
+  premium: {
+    enabled: "已啟用，子分類請於下方「精緻璽品子分類名稱」區塊設定。",
+    disabled: "如需改用子選單，開啟後內容請於下方「精緻璽品子分類名稱」區塊設定。",
+  },
+  theme_travel: {
+    enabled: "已啟用，子類別請於下方「主題旅遊子類別名稱」區塊編輯。",
+    disabled: "如需改用子選單，開啟後子類別請於下方「主題旅遊子類別名稱」區塊編輯。",
+  },
+};
+
+const GENERIC_SUBMENU_NOTE = {
+  enabled: "已啟用子選單。",
+  disabled: "子選單關閉時，點擊此分類會導向所設定的頁面網址。",
+};
+
+export const submenuNote = (key: string) => SUBMENU_NOTES[key] ?? GENERIC_SUBMENU_NOTE;
+
+export type CategoryDraft = {
+  id: number;
+  key: string;
+  /** From the API (`submenu_available`): only these show the submenu toggle. */
   hasSubmenu: boolean;
+  displayName: string;
   submenuEnabled: boolean;
-  linkUrl: string;
-  submenuNote: string;
+  redirectUrl: string;
 };
 
-export const INITIAL_SIDEBAR_CATEGORIES: SidebarCategory[] = [
-  {
-    id: "cat-1",
-    name: "國外團體",
-    hasSubmenu: true,
-    submenuEnabled: true,
-    linkUrl: "",
-    submenuNote: "已啟用，地區子分類請於下方「國外團體地區子分類管理」區塊編輯。",
-  },
-  {
-    id: "cat-2",
-    name: "精緻璽品",
-    hasSubmenu: true,
-    submenuEnabled: false,
-    linkUrl: "",
-    submenuNote: "如需改用子選單，開啟後內容請於下方「精緻璽品子分類管理」區塊設定。",
-  },
-  {
-    id: "cat-3",
-    name: "主題旅遊",
-    hasSubmenu: true,
-    submenuEnabled: true,
-    linkUrl: "",
-    submenuNote: "已啟用，子類別請於下方「主題旅遊子類別名稱」區塊編輯。",
-  },
-  { id: "cat-4", name: "客製包團", hasSubmenu: false, submenuEnabled: false, linkUrl: "", submenuNote: "" },
-  { id: "cat-5", name: "美安專區", hasSubmenu: false, submenuEnabled: false, linkUrl: "", submenuNote: "" },
-  { id: "cat-6", name: "機票", hasSubmenu: false, submenuEnabled: false, linkUrl: "", submenuNote: "" },
-  { id: "cat-7", name: "簽證", hasSubmenu: false, submenuEnabled: false, linkUrl: "", submenuNote: "" },
-  { id: "cat-8", name: "旅客服務", hasSubmenu: false, submenuEnabled: false, linkUrl: "", submenuNote: "" },
-  { id: "cat-9", name: "旅程分享", hasSubmenu: false, submenuEnabled: false, linkUrl: "", submenuNote: "" },
-];
-
-export type RegionSubcategory = {
-  id: string;
+/** `id` is null for rows added in the editor and not saved yet; `key` is the React key. */
+export type RegionDraft = {
+  key: string;
+  id: number | null;
   name: string;
+  position: number;
 };
 
-export const INITIAL_REGION_SUBCATEGORIES: RegionSubcategory[] = [
-  { id: "region-1", name: "日本" },
-  { id: "region-2", name: "韓國" },
-  { id: "region-3", name: "中國" },
-  { id: "region-4", name: "港澳" },
-  { id: "region-5", name: "東南亞" },
-  { id: "region-6", name: "紐澳" },
-  { id: "region-7", name: "歐洲" },
-  { id: "region-8", name: "美加" },
-  { id: "region-9", name: "中東非洲" },
-];
+export type ThemeDraft = {
+  key: string;
+  id: number | null;
+  name: string;
+  visible: boolean;
+  position: number;
+  collectionId: number | null;
+};
 
+export type CategoriesDraft = {
+  categories: CategoryDraft[];
+  regions: RegionDraft[];
+  themes: ThemeDraft[];
+};
+
+export function toCategoriesDraft(
+  categories: NavCategory[],
+  regions: Region[],
+  themes: Theme[],
+): CategoriesDraft {
+  return {
+    categories: categories.map((cat) => ({
+      id: cat.id,
+      key: cat.key,
+      hasSubmenu: cat.submenu_available,
+      displayName: cat.display_name,
+      submenuEnabled: cat.submenu_enabled,
+      redirectUrl: cat.redirect_url ?? "",
+    })),
+    regions: regions.map((region) => ({
+      key: `region-${region.id}`,
+      id: region.id,
+      name: region.name,
+      position: region.position,
+    })),
+    themes: themes.map((theme) => ({
+      key: `theme-${theme.id}`,
+      id: theme.id,
+      name: theme.name,
+      visible: theme.visible,
+      position: theme.position,
+      collectionId: theme.collection_id,
+    })),
+  };
+}
+
+export const nextPosition = (rows: { position: number }[]) =>
+  rows.reduce((max, row) => Math.max(max, row.position), 0) + 1;
+
+export const newRegion = (rows: RegionDraft[]): RegionDraft => ({
+  key: generateId("region"),
+  id: null,
+  name: "",
+  position: nextPosition(rows),
+});
+
+export const newTheme = (rows: ThemeDraft[]): ThemeDraft => ({
+  key: generateId("theme"),
+  id: null,
+  name: "",
+  visible: true,
+  position: nextPosition(rows),
+  collectionId: null,
+});
+
+const normalizeName = (name: string) => name.trim().toLowerCase();
+
+/** Names (normalized) used by more than one row; blank names are left to the required check. */
+export function duplicateNames(rows: { name: string }[]): Set<string> {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const row of rows) {
+    const name = normalizeName(row.name);
+    if (!name) continue;
+    if (seen.has(name)) duplicates.add(name);
+    seen.add(name);
+  }
+  return duplicates;
+}
+
+export const isDuplicate = (duplicates: Set<string>, name: string) => duplicates.has(normalizeName(name));
+
+export function isDraftValid(draft: CategoriesDraft): boolean {
+  return (
+    draft.categories.every((cat) => isValidName(cat.displayName, CATEGORY_NAME_MAX)) &&
+    draft.regions.every((region) => isValidName(region.name, SUBCATEGORY_NAME_MAX)) &&
+    draft.themes.every((theme) => isValidName(theme.name, SUBCATEGORY_NAME_MAX)) &&
+    duplicateNames(draft.regions).size === 0 &&
+    duplicateNames(draft.themes).size === 0
+  );
+}
+
+// 精緻璽品子分類：後端尚無對應 API，暫以本地假資料呈現，不會儲存。
 export type LuxurySubcategory = {
   id: string;
   name: string;
@@ -64,22 +151,3 @@ export type LuxurySubcategory = {
 };
 
 export const INITIAL_LUXURY_SUBCATEGORIES: LuxurySubcategory[] = [];
-
-export type ThemeSubcategory = {
-  id: string;
-  name: string;
-  visible: boolean;
-  pageLabel: string;
-};
-
-export const INITIAL_THEME_SUBCATEGORIES: ThemeSubcategory[] = [
-  { id: "theme-1", name: "賽車", visible: true, pageLabel: "《賽車》主題集合頁" },
-  { id: "theme-2", name: "郵輪", visible: true, pageLabel: "《郵輪》主題集合頁" },
-  { id: "theme-3", name: "鐵道", visible: true, pageLabel: "《鐵道》主題集合頁" },
-  { id: "theme-4", name: "山林", visible: true, pageLabel: "《山林》主題集合頁" },
-  { id: "theme-5", name: "滑雪", visible: true, pageLabel: "《滑雪》主題集合頁" },
-  { id: "theme-6", name: "馬拉松", visible: true, pageLabel: "《馬拉松》主題集合頁" },
-  { id: "theme-7", name: "單車", visible: false, pageLabel: "《單車》主題集合頁" },
-  { id: "theme-8", name: "登山健行", visible: true, pageLabel: "《登山健行》主題集合頁" },
-  { id: "theme-9", name: "高爾夫", visible: true, pageLabel: "《高爾夫》主題集合頁" },
-];

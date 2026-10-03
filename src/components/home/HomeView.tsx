@@ -23,7 +23,7 @@ function mediaUrl(media: PublicMedia | null, variant?: "hero" | "card" | "thumb"
 const MORE_HREF: Record<string, string> = {
   guaranteed: "/guaranteed-departure",
   premium: buildSearchHref({ zone: "premium" }),
-  theme: "/theme",
+  theme: buildSearchHref({ zone: "theme_travel" }),
 };
 
 function toTour(trip: HomepageTripCard): Tour {

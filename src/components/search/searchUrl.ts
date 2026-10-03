@@ -34,6 +34,11 @@ export function buildSearchHref(state: Partial<SearchUrlState>): string {
   return qs ? `/search?${qs}` : "/search";
 }
 
+/** Public theme collection page; the backend names each theme's collection `theme-{themeId}`. */
+export function themeCollectionHref(themeId: number): string {
+  return `/theme/theme-${themeId}`;
+}
+
 export function parseSearchParams(params: URLSearchParams): SearchUrlState {
   const zone = params.get("zone") as TripZone | null;
   const themeId = Number(params.get("theme_id"));

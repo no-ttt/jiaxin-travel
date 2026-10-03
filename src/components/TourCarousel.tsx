@@ -17,10 +17,23 @@ export type Tour = {
   externalUrl?: string | null;
 };
 
-function TourCard({ tour }: { tour: Tour }) {
+/** Gap between cards in a page (Tailwind gap-6). */
+const CARD_GAP_REM = 1.5;
+
+/**
+ * A card is as wide as in a full page of `cardsPerPage`, so a section with only one or two trips
+ * (or a short last page) keeps the same card size instead of stretching them across the row.
+ */
+const cardWidth = (cardsPerPage: number) =>
+  `calc((100% - ${(cardsPerPage - 1) * CARD_GAP_REM}rem) / ${cardsPerPage})`;
+
+function TourCard({ tour, width }: { tour: Tour; width: string }) {
   const { prefix, suffix } = priceAffixes(tour.currency);
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_4px_16px_0px_rgba(8,28,58,0.12)]">
+    <div
+      className="flex min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_4px_16px_0px_rgba(8,28,58,0.12)]"
+      style={{ width }}
+    >
       <div className="relative h-[180px] w-full sm:h-[256px]">
         {tour.image ? (
           <Image
@@ -212,7 +225,7 @@ export default function TourCarousel({
               style={i > 0 ? { marginLeft: "3rem" } : undefined}
             >
               {page.map((tour) => (
-                <TourCard key={tour.id} tour={tour} />
+                <TourCard key={tour.id} tour={tour} width={cardWidth(cardsPerPage)} />
               ))}
             </div>
           ))}

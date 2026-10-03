@@ -73,8 +73,14 @@ export default function Banner({ slides }: { slides: BannerSlide[] }) {
   const [activeTabId, setActiveTabId] = useState(TABS[0].id);
   const [pendingTabId, setPendingTabId] = useState<string | null>(null);
 
-  const activeTab = TABS.find((tab) => tab.id === activeTabId) ?? TABS[0];
-  const pendingTab = pendingTabId ? TABS.find((tab) => tab.id === pendingTabId) : null;
+  // 精緻璽品 follows 產品分類設定: its tab only shows while that category's submenu is enabled.
+  const { data: navigation } = useNavigation();
+  const premiumEnabled =
+    navigation?.categories.find((category) => category.key === "premium")?.submenu_enabled ?? false;
+  const tabs = TABS.filter((tab) => tab.id !== "boutique" || premiumEnabled);
+
+  const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
+  const pendingTab = pendingTabId ? tabs.find((tab) => tab.id === pendingTabId) : null;
   const isKindChange = pendingTab ? pendingTab.kind !== activeTab.kind : false;
 
   const handleTabClick = useCallback(
@@ -188,8 +194,8 @@ export default function Banner({ slides }: { slides: BannerSlide[] }) {
 
       <div className="relative z-10 mx-4 -mt-8 rounded-3xl bg-white shadow-[0px_12px_40px_-12px_rgba(24,72,150,0.1)] sm:mx-8 sm:-mt-14 lg:mx-[120px] lg:-mt-14">
         <div className="flex flex-wrap items-center justify-center rounded-t-3xl border-b border-slate-200 bg-slate-50">
-          {TABS.map((tab) => {
-            const isActive = tab.id === activeTabId;
+          {tabs.map((tab) => {
+            const isActive = tab.id === activeTab.id;
             return (
               <button
                 key={tab.id}

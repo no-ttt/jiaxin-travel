@@ -1,43 +1,23 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { collectionsApi } from "../endpoints/collections";
-import type { AddTripIn, CollectionUpdate, ReorderIn } from "../types/collection";
 
-export function useCollection(collectionId: string) {
+export const collectionKey = (collectionId: number) => ["collections", collectionId] as const;
+
+export function useCollection(collectionId: number | null) {
   return useQuery({
-    queryKey: ["collections", collectionId],
-    queryFn: () => collectionsApi.get(collectionId),
-    enabled: Boolean(collectionId),
+    queryKey: collectionKey(collectionId ?? 0),
+    queryFn: () => collectionsApi.get(collectionId!),
+    enabled: collectionId != null,
   });
 }
 
-export function useUpdateCollection(collectionId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: CollectionUpdate) => collectionsApi.update(collectionId, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["collections", collectionId] }),
-  });
-}
-
-export function useAddTripToCollection(collectionId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: AddTripIn) => collectionsApi.addTrip(collectionId, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["collections", collectionId] }),
-  });
-}
-
-export function useReorderCollectionItems(collectionId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: ReorderIn) => collectionsApi.reorder(collectionId, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["collections", collectionId] }),
-  });
-}
-
-export function useRemoveTripFromCollection(collectionId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (tripId: string) => collectionsApi.removeTrip(collectionId, tripId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["collections", collectionId] }),
+/** Published trips matching a 團號／團名 query; idle while the query is blank. */
+export function useCollectionTripSearch(collectionId: number | null, q: string) {
+  const query = q.trim();
+  return useQuery({
+    queryKey: ["collections", collectionId, "trip-search", query],
+    queryFn: () => collectionsApi.searchTripsForCollection(collectionId!, query),
+    enabled: collectionId != null && query.length > 0,
+    staleTime: 30_000,
   });
 }

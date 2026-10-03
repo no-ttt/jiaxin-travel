@@ -3,28 +3,35 @@
 import { useState } from "react";
 import AdminInfoNote from "../ui/AdminInfoNote";
 import AdminSectionCard from "../ui/AdminSectionCard";
-import { generateId } from "../ui/generateId";
-import { useDirtyTracking } from "../ui/useDirtyTracking";
-import { INITIAL_REGION_SUBCATEGORIES, type RegionSubcategory } from "./data";
+import { SUBCATEGORY_NAME_MAX, duplicateNames, isDuplicate, isValidName, newRegion, type RegionDraft } from "./data";
 
 export default function RegionSubcategoriesSection({
-  onDirtyChange,
-  resetKey,
+  value: regions,
+  onChange,
 }: {
-  onDirtyChange?: (dirty: boolean) => void;
-  resetKey?: unknown;
+  value: RegionDraft[];
+  onChange: (updater: (prev: RegionDraft[]) => RegionDraft[]) => void;
 }) {
-  const [regions, setRegions] = useState<RegionSubcategory[]>(INITIAL_REGION_SUBCATEGORIES);
   const [collapsed, setCollapsed] = useState(false);
-  useDirtyTracking(regions, onDirtyChange, resetKey);
 
-  const updateRegion = (id: string, name: string) => {
-    setRegions((prev) => prev.map((region) => (region.id === id ? { ...region, name } : region)));
+  const updateRegion = (key: string, name: string) => {
+    onChange((prev) => prev.map((region) => (region.key === key ? { ...region, name } : region)));
+  };
+
+  // Names are saved trimmed; trimming on blur shows the admin exactly what will be saved.
+  const trimRegion = (region: RegionDraft) => {
+    if (region.name !== region.name.trim()) updateRegion(region.key, region.name.trim());
   };
 
   const addRegion = () => {
-    setRegions((prev) => [...prev, { id: generateId("region"), name: "" }]);
+    onChange((prev) => [...prev, newRegion(prev)]);
   };
+
+  const removeRegion = (region: RegionDraft) => {
+    onChange((prev) => prev.filter((item) => item.key !== region.key));
+  };
+
+  const duplicates = duplicateNames(regions);
 
   return (
     <AdminSectionCard
@@ -56,25 +63,49 @@ export default function RegionSubcategoriesSection({
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            {regions.map((region, index) => (
-              <div key={region.id} className="flex flex-col gap-[7px]">
-                <span className="text-sm font-bold leading-[1.45em] text-[#090909]">地區 {index + 1} 名稱</span>
-                <input
-                  type="text"
-                  value={region.name}
-                  onChange={(e) => updateRegion(region.id, e.target.value)}
-                  className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
-                />
-              </div>
-            ))}
+            {regions.map((region, index) => {
+              const duplicated = isDuplicate(duplicates, region.name);
+              const invalid = !isValidName(region.name, SUBCATEGORY_NAME_MAX) || duplicated;
+              return (
+                <div key={region.key} className="flex flex-col gap-[7px]">
+                  <span className="text-sm font-bold leading-[1.45em] text-[#090909]">地區 {index + 1} 名稱</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={region.name}
+                      maxLength={SUBCATEGORY_NAME_MAX}
+                      onChange={(e) => updateRegion(region.key, e.target.value)}
+                      onBlur={() => trimRegion(region)}
+                      className={`h-11 w-full rounded-xl border bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0] ${
+                        invalid ? "border-[#D92D20]" : "border-[#E0E3E8]"
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeRegion(region)}
+                      className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#E0E3E8] text-sm text-[#535F71] transition hover:border-[#0053E0] hover:bg-[#ECF1FA]"
+                      aria-label={`刪除地區${region.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {invalid && (
+                    <p className="text-xs leading-[1.45em] text-[#D92D20]">
+                      {duplicated ? "名稱重複，請改用其他名稱" : `名稱必填，最多 ${SUBCATEGORY_NAME_MAX} 字`}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <AdminInfoNote>
             以上為國外團體地區子分類內容，同時也是「行程資料編輯 → 前台識別 →
-            地區標籤」的唯一資料來源；請僅在此處新增／修改地區，行程端的地區標籤選項會自動同步，不需另外維護。排列順序與顯示開關暫不開放後台調整。
+            地區標籤」的唯一資料來源；請僅在此處新增／修改／刪除地區，行程端的地區標籤選項會自動同步，不需另外維護。排列順序與顯示開關暫不開放後台調整。
           </AdminInfoNote>
         </>
       )}
+
     </AdminSectionCard>
   );
 }

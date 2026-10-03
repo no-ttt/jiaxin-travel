@@ -3,6 +3,7 @@ import "server-only";
 import { ApiError } from "./client";
 import { API_V1_PREFIX, SERVER_API_ORIGIN } from "./config";
 import type { Footer, Homepage, Navigation } from "./types/cms";
+import type { PublicCollection } from "./types/collection";
 import type { PublicTripDetail } from "./types/trip";
 
 /**
@@ -48,4 +49,10 @@ export const getHomepage = () => cmsFetch<Homepage>("/public/homepage", { tags: 
 export const getPublicTrip = (tripCode: string) =>
   cmsFetch<PublicTripDetail>(`/public/trips/${encodeURIComponent(tripCode)}`, {
     tags: ["trips", `trip:${tripCode}`],
+  });
+
+/** First page of a collection (e.g. slug "theme-1"); later pages load in the browser. */
+export const getPublicCollection = (slug: string) =>
+  cmsFetch<PublicCollection>(`/public/collections/${encodeURIComponent(slug)}`, {
+    tags: ["collections", `collection:${slug}`],
   });
