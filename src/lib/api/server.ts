@@ -2,7 +2,15 @@ import "server-only";
 
 import { ApiError } from "./client";
 import { API_V1_PREFIX, SERVER_API_ORIGIN } from "./config";
-import type { Footer, Homepage, Navigation, VisaServices } from "./types/cms";
+import type {
+  ContractPage,
+  Footer,
+  FraudNoticePage,
+  Homepage,
+  Navigation,
+  PurchaseFlowPage,
+  VisaServices,
+} from "./types/cms";
 import type { PublicCollection } from "./types/collection";
 import type { PublicTripDetail } from "./types/trip";
 
@@ -47,6 +55,13 @@ export const getFooter = () => cmsFetch<Footer>("/public/footer", { tags: ["foot
 export const getHomepage = () => cmsFetch<Homepage>("/public/homepage", { tags: ["homepage"] });
 export const getVisaServices = () =>
   cmsFetch<VisaServices>("/public/visa-services", { tags: ["visa-services"] });
+
+/** 旅客須知 tab content (key e.g. "fraud-notice"). */
+const getContentPage = <T>(key: string) =>
+  cmsFetch<T>(`/public/pages/${encodeURIComponent(key)}`, { tags: ["pages", `page:${key}`] });
+export const getFraudNotice = () => getContentPage<FraudNoticePage>("fraud-notice");
+export const getContract = () => getContentPage<ContractPage>("contract");
+export const getPurchaseFlow = () => getContentPage<PurchaseFlowPage>("purchase-flow");
 
 export const getPublicTrip = (tripCode: string) =>
   cmsFetch<PublicTripDetail>(`/public/trips/${encodeURIComponent(tripCode)}`, {

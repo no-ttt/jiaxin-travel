@@ -1,7 +1,7 @@
 import type { VisaNoticeDoc, VisaServiceDetail } from "@/lib/api/types/cms";
+import { isBlankHtml } from "@/lib/html";
 
-/** Rich-text output counts as empty when it holds only tags / &nbsp; (e.g. "<p><br></p>"). */
-export const isBlankHtml = (html: string) => html.replace(/<[^>]*>|&nbsp;/g, "").trim() === "";
+export { isBlankHtml };
 
 /** 辦證須知 documents; until the backend stores `notice_docs`, the legacy `notice_html` is one block. */
 export function noticeDocsOf(detail: VisaServiceDetail): VisaNoticeDoc[] {

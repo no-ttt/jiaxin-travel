@@ -7,6 +7,9 @@ import ToggleSwitch from "../ui/ToggleSwitch";
 import RichTextEditor from "../trips/RichTextEditor";
 import type { OrderFlowStep } from "./data";
 
+/** The backend rejects more than 5 steps (422 "List should have at most 5 items"). */
+const MAX_STEPS = 5;
+
 export default function StepsSection({
   steps,
   onStepsChange,
@@ -29,6 +32,7 @@ export default function StepsSection({
   };
 
   const addStep = () => {
+    if (steps.length >= MAX_STEPS) return;
     const newStep: OrderFlowStep = {
       id: generateId("step"),
       label: `步驟 ${steps.length + 1}`,
@@ -58,7 +62,9 @@ export default function StepsSection({
           <button
             type="button"
             onClick={addStep}
-            className="cursor-pointer whitespace-nowrap text-xs font-medium leading-[1.45em] text-[#0053E0]"
+            disabled={steps.length >= MAX_STEPS}
+            title={steps.length >= MAX_STEPS ? `最多 ${MAX_STEPS} 個步驟，請先刪除一個步驟` : undefined}
+            className="cursor-pointer whitespace-nowrap text-xs font-medium leading-[1.45em] text-[#0053E0] disabled:cursor-not-allowed disabled:opacity-40"
           >
             ＋ 新增步驟
           </button>

@@ -30,6 +30,9 @@ function RowActionButton({
   );
 }
 
+/** The backend rejects more than 6 highlight cards (TripUpdate.highlights maxItems: 6). */
+const MAX_HIGHLIGHTS = 6;
+
 export default function HighlightsSection({
   title,
   description,
@@ -131,6 +134,7 @@ export default function HighlightsSection({
   };
 
   const addCard = () => {
+    if (cards.length >= MAX_HIGHLIGHTS) return;
     setCards((prev) => [
       ...prev,
       {
@@ -298,7 +302,9 @@ export default function HighlightsSection({
       <button
         type="button"
         onClick={addCard}
-        className="flex h-[42px] w-full cursor-pointer items-center justify-center rounded-lg border border-[#0053E0] text-[13px] font-bold leading-[1.45em] text-[#0053E0] hover:bg-[#ECF1FA]"
+        disabled={cards.length >= MAX_HIGHLIGHTS}
+        title={cards.length >= MAX_HIGHLIGHTS ? `最多 ${MAX_HIGHLIGHTS} 個特色卡面，請先刪除一個` : undefined}
+        className="flex h-[42px] w-full cursor-pointer items-center justify-center rounded-lg border border-[#0053E0] text-[13px] font-bold leading-[1.45em] text-[#0053E0] hover:bg-[#ECF1FA] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       >
         ＋ 新增特色卡面
       </button>

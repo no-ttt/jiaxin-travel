@@ -4,10 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useFooter } from "@/lib/api/hooks/useCms";
 
+/** Design order: LINE, Facebook, Instagram (footer-social-1/2/3 are drawn in that order). */
 const SOCIAL_LINK_DEFS = [
-  { id: "facebook", icon: "/images/footer-social-1.svg", label: "Facebook" },
-  { id: "instagram", icon: "/images/footer-social-2.svg", label: "Instagram" },
-  { id: "line", icon: "/images/footer-social-3.svg", label: "LINE" },
+  { id: "line", icon: "/images/footer-social-1.svg", label: "LINE" },
+  { id: "facebook", icon: "/images/footer-social-2.svg", label: "Facebook" },
+  { id: "instagram", icon: "/images/footer-social-3.svg", label: "Instagram" },
 ] as const;
 
 /** Light is the site default; dark follows the "Footer Minimal - Dark" design (主題集合頁). */
@@ -24,7 +25,6 @@ const PALETTES = {
     copyright: "text-[#738091]",
     link: "text-[#0053E0]",
     linkDivider: "bg-[#C7CFD9]",
-    muted: "text-[#94969C]",
   },
   dark: {
     footer: "border-[#334155] bg-[#0F172A]",
@@ -40,29 +40,18 @@ const PALETTES = {
     copyright: "text-[#94A3B8]",
     link: "text-[#60A5FA]",
     linkDivider: "bg-[#475569]",
-    muted: "text-[#94A3B8]",
   },
 } as const;
 
 export default function Footer({ variant = "light" }: { variant?: keyof typeof PALETTES }) {
   const c = PALETTES[variant];
-  const { data: footer, isLoading } = useFooter();
+  const { data: footer } = useFooter();
 
-  if (isLoading) {
-    return (
-      <footer className={`flex items-center justify-center border-t px-4 py-8 text-sm ${c.footer} ${c.copyright}`}>
-        載入頁尾資料中…
-      </footer>
-    );
-  }
+  // Prefetched in the root layout, so this only happens when the API was down: show the bare frame.
+  if (!footer) return <footer className={`border-t ${c.footer}`} />;
 
-  if (!footer) {
-    return (
-      <footer className={`flex items-center justify-center border-t px-4 py-8 text-sm text-[#B45309] ${c.footer}`}>
-        頁尾資料缺少（API 無回應）
-      </footer>
-    );
-  }
+  // Shown at up to 210px wide; the 800px card variant stays sharp on 2x screens (thumb is 400px).
+  const logoUrl = footer.logo ? (footer.logo.variants.card ?? footer.logo.url) : null;
 
   const socialUrls: Record<string, string | null> = {
     facebook: footer.facebook_url,
@@ -81,17 +70,14 @@ export default function Footer({ variant = "light" }: { variant?: keyof typeof P
     <footer className={`flex flex-col items-center gap-3 border-t px-4 py-8 sm:px-8 lg:px-[120px] ${c.footer}`}>
       <div className="flex w-full max-w-[1200px] flex-col gap-10 lg:flex-row lg:justify-between">
         <div className="flex flex-col gap-3">
-          <div className={`flex w-fit items-center gap-1 ${c.logoCard}`}>
-            {footer.logo ? (
-              <span className="relative h-12 w-[68px] shrink-0">
-                <Image src={footer.logo} alt="" fill className="object-contain" />
+          {logoUrl && (
+            <div className={`flex w-fit items-center gap-1 ${c.logoCard}`}>
+              {/* Design: the logo group sits in a 210×65 box, aligned left. */}
+              <span className="relative h-[65px] w-[210px] shrink-0">
+                <Image src={logoUrl} alt={footer.brand_name_zh} fill className="object-contain object-left" />
               </span>
-            ) : (
-              <span className="flex h-12 w-[68px] shrink-0 items-center justify-center rounded bg-white/60 text-[10px] text-[#94969C]">
-                無 Logo
-              </span>
-            )}
-          </div>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <span className={`font-serif text-lg font-bold ${c.brand}`}>{footer.brand_name_zh}</span>
             <span className={`text-lg font-semibold ${c.brand}`}>{footer.brand_name_en}</span>
@@ -102,7 +88,7 @@ export default function Footer({ variant = "light" }: { variant?: keyof typeof P
         </div>
 
         <div className="flex flex-col items-center gap-8 pt-4">
-          {activeSocialLinks.length > 0 ? (
+          {activeSocialLinks.length > 0 && (
             <div className="flex items-center gap-10">
               {activeSocialLinks.map((social) => (
                 <a
@@ -117,8 +103,6 @@ export default function Footer({ variant = "light" }: { variant?: keyof typeof P
                 </a>
               ))}
             </div>
-          ) : (
-            <span className={`text-sm ${c.muted}`}>無社群連結</span>
           )}
 
           <div className="flex flex-col gap-3.5">
@@ -148,18 +132,14 @@ export default function Footer({ variant = "light" }: { variant?: keyof typeof P
       <div className="flex w-full max-w-[1200px] flex-col items-center gap-4 py-4 sm:flex-row sm:justify-between">
         <span className={`text-sm ${c.copyright}`}>{footer.copyright}</span>
         <div className="flex items-center gap-5">
-          {footer.links.length > 0 ? (
-            footer.links.map((link, i) => (
-              <span key={link.url} className="flex items-center gap-5">
-                {i > 0 && <span className={`h-3.5 w-px ${c.linkDivider}`} />}
-                <Link href={link.url} className={`cursor-pointer text-sm font-medium ${c.link}`}>
-                  {link.label}
-                </Link>
-              </span>
-            ))
-          ) : (
-            <span className={`text-sm ${c.muted}`}>無頁尾連結</span>
-          )}
+          {footer.links.map((link, i) => (
+            <span key={i} className="flex items-center gap-5">
+              {i > 0 && <span className={`h-3.5 w-px ${c.linkDivider}`} />}
+              <Link href={link.url} className={`cursor-pointer text-sm font-medium ${c.link}`}>
+                {link.label}
+              </Link>
+            </span>
+          ))}
         </div>
       </div>
     </footer>

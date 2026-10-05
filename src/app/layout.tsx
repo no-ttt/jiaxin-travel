@@ -27,7 +27,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   ]);
 
   return (
-    <html lang="zh-Hant" className="h-full antialiased">
+    // Smooth scrolling for in-page anchors (e.g. /terms#payment-info). data-scroll-behavior lets
+    // Next.js switch it off during route changes so page navigation still jumps to the top instantly.
+    <html lang="zh-Hant" className="h-full antialiased motion-safe:scroll-smooth" data-scroll-behavior="smooth">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

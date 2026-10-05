@@ -9,6 +9,9 @@ import { generateId } from "../ui/generateId";
 import AdminSelect from "../trips/AdminSelect";
 import type { TestimonialItem } from "./data";
 
+/** The backend rejects more than 12 testimonials (422 "List should have at most 12 items"). */
+const MAX_TESTIMONIALS = 12;
+
 const RATING_OPTIONS = [5, 4, 3, 2, 1].map((rating) => ({
   rating,
   label: `${"★".repeat(rating)}（${rating}）`,
@@ -102,7 +105,12 @@ export default function TestimonialSection({
           />
         </AdminItemCard>
       ))}
-      <AdminAddButton label="新增好評" onClick={addTestimonial} />
+      <AdminAddButton
+        label="新增好評"
+        onClick={addTestimonial}
+        disabled={testimonials.length >= MAX_TESTIMONIALS}
+        title={testimonials.length >= MAX_TESTIMONIALS ? `最多 ${MAX_TESTIMONIALS} 則好評，請先刪除一則` : undefined}
+      />
     </AdminSectionCard>
   );
 }

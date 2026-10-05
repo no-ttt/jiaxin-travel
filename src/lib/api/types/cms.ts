@@ -166,6 +166,22 @@ export type FooterLink = {
   label: string;
 };
 
+/** Admin footer document (`GET /admin/cms/footer` → `data`), confirmed against the live API. */
+export type FooterDoc = {
+  brand_name_zh: string;
+  brand_name_en: string;
+  legal_info: string;
+  logo_media_id: string | null;
+  phone: string;
+  email: string;
+  address: string;
+  line_url: string | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  copyright: string;
+  links: FooterLink[];
+};
+
 export type Footer = {
   email: string;
   phone: string;
@@ -178,7 +194,8 @@ export type Footer = {
   instagram_url: string | null;
   brand_name_en: string;
   brand_name_zh: string;
-  logo: string | null;
+  /** Resolved from the doc's `logo_media_id` (confirmed: a full media object, not a URL). */
+  logo: PublicMedia | null;
 };
 
 /**
@@ -249,4 +266,56 @@ export type VisaServices = {
   visa_badge_text: string;
   passport_items: VisaPassportItem[];
   visa_items: VisaCountryItem[];
+};
+
+/**
+ * 旅客須知 content pages (GET /public/pages/{key}; admin doc `GET /admin/cms/{key}` → `data`).
+ * Confirmed against the live API: the public response and the admin doc are the same object.
+ */
+export type ContentPageSection = {
+  title: string;
+  body_html: string;
+};
+
+/** key `fraud-notice` — 防詐騙提醒說明. */
+export type FraudNoticePage = {
+  page_title: string;
+  intro_html: string;
+  sections: ContentPageSection[];
+};
+
+/** key `contract` — 旅遊契約書. */
+export type ContractPage = {
+  page_title: string;
+  intro_html: string;
+  doc_title: string;
+  doc_link_text: string;
+  /** Public read: already the uploaded file's URL when `doc_media_id` is set (confirmed). */
+  doc_url: string;
+  /** Admin doc only (the public response drops it once resolved); uploaded file wins over `doc_url`. */
+  doc_media_id?: string | null;
+  sections: ContentPageSection[];
+};
+
+/** key `purchase-flow` — 訂購流程. The public response already omits steps with `visible: false`. */
+export type PurchaseFlowStep = {
+  title: string;
+  visible: boolean;
+  body_html: string;
+};
+
+export type PurchaseFlowPayment = {
+  account_name: string;
+  bank_name: string;
+  bank_code: string;
+  account_number: string;
+  note_html: string;
+  /** 「匯款資訊」顯示開關 — requested from the backend, not stored yet (it drops unknown fields). */
+  visible?: boolean;
+};
+
+export type PurchaseFlowPage = {
+  steps: PurchaseFlowStep[];
+  payment: PurchaseFlowPayment;
+  reminder_html: string;
 };
