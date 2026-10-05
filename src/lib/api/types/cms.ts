@@ -180,3 +180,73 @@ export type Footer = {
   brand_name_zh: string;
   logo: string | null;
 };
+
+/**
+ * 護照及簽證代辦（GET /public/visa-services; admin doc `GET /admin/cms/visa-services` → `data`).
+ * Confirmed against the live public response; the admin doc is assumed to share this shape.
+ */
+export type VisaDownload = {
+  label: string;
+  url: string;
+  media_id: string | null;
+};
+
+export type VisaRequiredDoc = {
+  title: string;
+  body_html: string;
+  downloads: VisaDownload[];
+};
+
+/**
+ * 辦證須知 / 文件下載 rows as the design needs them. `notice_title`, `notice_docs` and the
+ * download `title` / `description` are requested from the backend and not stored yet (it drops
+ * unknown fields), hence optional; until then 辦證須知 falls back to `notice_html`.
+ */
+export type VisaNoticeDoc = {
+  title: string;
+  body_html: string;
+};
+
+export type VisaDownloadDoc = VisaDownload & {
+  title?: string;
+  description?: string;
+};
+
+/** 「查看詳情」drawer: 需備資料 / 辦證須知 / 文件下載 tabs. */
+export type VisaServiceDetail = {
+  required_docs_visible: boolean;
+  required_docs_title: string;
+  required_docs: VisaRequiredDoc[];
+  notice_visible: boolean;
+  notice_title?: string;
+  notice_docs?: VisaNoticeDoc[];
+  /** Legacy single-block 辦證須知; read-only fallback, round-tripped unchanged. */
+  notice_html: string;
+  downloads_visible: boolean;
+  downloads: VisaDownloadDoc[];
+};
+
+export type VisaPassportItem = {
+  name: string;
+  visible: boolean;
+  validity: string;
+  working_days: string;
+  fee: string;
+  detail: VisaServiceDetail;
+};
+
+export type VisaCountryItem = {
+  name: string;
+  visible: boolean;
+  validity: string;
+  days_text: string;
+  fee_text: string;
+  detail: VisaServiceDetail;
+};
+
+export type VisaServices = {
+  /** Not shown on the site; round-tripped unchanged. */
+  visa_badge_text: string;
+  passport_items: VisaPassportItem[];
+  visa_items: VisaCountryItem[];
+};

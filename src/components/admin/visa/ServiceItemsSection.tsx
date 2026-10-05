@@ -2,48 +2,50 @@
 
 import { useState } from "react";
 import AdminSectionCard from "../ui/AdminSectionCard";
-import { generateId } from "../ui/generateId";
 import ItemEditor from "./ItemEditor";
 import TabManager from "./TabManager";
-import { createServiceItem, type ServiceItem } from "./data";
+import type { EditableServiceItem, FieldConfig } from "./data";
 
-export default function ServiceItemsSection({
+export default function ServiceItemsSection<T extends EditableServiceItem>({
   title,
   description,
   managerTitle,
   managerDescription,
+  fields,
   items,
+  createItem,
   onItemsChange,
 }: {
   title: string;
   description: string;
   managerTitle: string;
   managerDescription: string;
-  items: ServiceItem[];
-  onItemsChange: (items: ServiceItem[]) => void;
+  fields: FieldConfig<T>;
+  items: T[];
+  createItem: () => T;
+  onItemsChange: (items: T[]) => void;
 }) {
-  const [activeItemId, setActiveItemId] = useState(items[0]?.id ?? "");
+  const [activeItemId, setActiveItemId] = useState(items[0]?._id ?? "");
   const activeIndex = Math.max(
     0,
-    items.findIndex((item) => item.id === activeItemId)
+    items.findIndex((item) => item._id === activeItemId)
   );
   const activeItem = items[activeIndex];
 
-  const updateItem = (id: string, patch: Partial<ServiceItem>) => {
-    onItemsChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  const updateItem = (id: string, patch: Partial<T>) => {
+    onItemsChange(items.map((item) => (item._id === id ? { ...item, ...patch } : item)));
   };
 
   const addItem = () => {
-    const fieldLabels = items[0]?.fields.map((field) => field.label) ?? [];
-    const newItem = createServiceItem(generateId("item"), fieldLabels);
+    const newItem = createItem();
     onItemsChange([...items, newItem]);
-    setActiveItemId(newItem.id);
+    setActiveItemId(newItem._id);
   };
 
   const deleteItem = (id: string) => {
-    const remaining = items.filter((item) => item.id !== id);
+    const remaining = items.filter((item) => item._id !== id);
     onItemsChange(remaining);
-    if (activeItemId === id) setActiveItemId(remaining[0]?.id ?? "");
+    if (activeItemId === id) setActiveItemId(remaining[0]?._id ?? "");
   };
 
   return (
@@ -51,22 +53,24 @@ export default function ServiceItemsSection({
       <TabManager
         title={managerTitle}
         description={managerDescription}
-        tabs={items.map((item) => ({ id: item.id, name: item.name, visible: item.visible }))}
-        activeId={activeItem?.id ?? ""}
+        tabs={items.map((item) => ({ id: item._id, name: item.name, visible: item.visible }))}
+        activeId={activeItem?._id ?? ""}
         onSelect={setActiveItemId}
         onToggleVisible={(id) => {
-          const item = items.find((i) => i.id === id);
-          if (item) updateItem(id, { visible: !item.visible });
+          const item = items.find((i) => i._id === id);
+          if (item) updateItem(id, { visible: !item.visible } as Partial<T>);
         }}
         onAdd={addItem}
       />
 
       {activeItem && (
         <ItemEditor
+          key={activeItem._id}
           item={activeItem}
           index={activeIndex}
-          onChange={(patch) => updateItem(activeItem.id, patch)}
-          onDelete={items.length > 1 ? () => deleteItem(activeItem.id) : undefined}
+          fields={fields}
+          onChange={(patch) => updateItem(activeItem._id, patch)}
+          onDelete={items.length > 1 ? () => deleteItem(activeItem._id) : undefined}
         />
       )}
     </AdminSectionCard>

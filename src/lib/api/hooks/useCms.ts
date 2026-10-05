@@ -33,6 +33,10 @@ export function useCmsDocument<T = Record<string, unknown>>(key: string) {
     queryKey: ["cms", key],
     queryFn: () => cmsApi.getDocument<T>(key),
     enabled: Boolean(key),
+    // Editors reset their draft when a new server copy arrives; a background refetch (window
+    // focus / reconnect) after someone else saved would silently discard unsaved edits.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

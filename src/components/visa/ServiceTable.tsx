@@ -3,13 +3,16 @@
 import { useState } from "react";
 import Image from "next/image";
 import ServiceDetailDrawer from "./ServiceDetailDrawer";
+import type { VisaServiceDetail } from "@/lib/api/types/cms";
 
 export type ServiceRow = {
   id: string;
+  kind: "passport" | "visa";
   item: string;
   validity: string;
   duration: string;
   fee: string;
+  detail: VisaServiceDetail;
 };
 
 type ServiceTableProps = {

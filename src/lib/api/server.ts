@@ -2,7 +2,7 @@ import "server-only";
 
 import { ApiError } from "./client";
 import { API_V1_PREFIX, SERVER_API_ORIGIN } from "./config";
-import type { Footer, Homepage, Navigation } from "./types/cms";
+import type { Footer, Homepage, Navigation, VisaServices } from "./types/cms";
 import type { PublicCollection } from "./types/collection";
 import type { PublicTripDetail } from "./types/trip";
 
@@ -45,6 +45,8 @@ async function cmsFetch<T>(path: string, opts: { tags?: string[] } = {}): Promis
 export const getNavigation = () => cmsFetch<Navigation>("/public/navigation", { tags: ["navigation"] });
 export const getFooter = () => cmsFetch<Footer>("/public/footer", { tags: ["footer"] });
 export const getHomepage = () => cmsFetch<Homepage>("/public/homepage", { tags: ["homepage"] });
+export const getVisaServices = () =>
+  cmsFetch<VisaServices>("/public/visa-services", { tags: ["visa-services"] });
 
 export const getPublicTrip = (tripCode: string) =>
   cmsFetch<PublicTripDetail>(`/public/trips/${encodeURIComponent(tripCode)}`, {

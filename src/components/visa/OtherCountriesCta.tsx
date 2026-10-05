@@ -1,6 +1,11 @@
+"use client";
+
 import Image from "next/image";
+import { useFooter } from "@/lib/api/hooks/useCms";
 
 export default function OtherCountriesCta() {
+  const { data: footer } = useFooter();
+
   return (
     <div
       className="flex w-full flex-col items-start gap-6 rounded-[22px] px-6 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-[30px]"
@@ -18,7 +23,9 @@ export default function OtherCountriesCta() {
         </p>
       </div>
       <a
-        href="#"
+        href={footer?.line_url || "#"}
+        target="_blank"
+        rel="noopener noreferrer"
         className="flex h-[52px] w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-full bg-[#0053E0] px-6 text-sm font-bold text-white hover:bg-[#0047c2] sm:w-[260px]"
       >
         <Image src="/images/visa-chat-icon.svg" alt="" width={20} height={20} />

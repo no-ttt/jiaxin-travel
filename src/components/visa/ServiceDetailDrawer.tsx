@@ -2,80 +2,29 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useFooter } from "@/lib/api/hooks/useCms";
+import type { VisaDownload, VisaServiceDetail } from "@/lib/api/types/cms";
+import { isBlankHtml, noticeDocsOf } from "./detail";
 import type { ServiceRow } from "./ServiceTable";
 
 type DrawerTab = "documents" | "notes" | "downloads";
 
-type DocumentItem = {
-  title: string;
-  description?: string;
+const TAB_LABELS: Record<DrawerTab, string> = {
+  documents: "需備資料",
+  notes: "辦證須知",
+  downloads: "文件下載",
 };
 
-type DownloadItem = {
-  title: string;
-  description: string;
-  downloadLabel: string;
-};
+function visibleTabs(detail: VisaServiceDetail): DrawerTab[] {
+  const tabs: DrawerTab[] = [];
+  if (detail.required_docs_visible) tabs.push("documents");
+  if (detail.notice_visible) tabs.push("notes");
+  if (detail.downloads_visible) tabs.push("downloads");
+  return tabs;
+}
 
-const TABS: { id: DrawerTab; label: string }[] = [
-  { id: "documents", label: "需備資料" },
-  { id: "notes", label: "辦證須知" },
-  { id: "downloads", label: "文件下載" },
-];
-
-const DEFAULT_DOCUMENTS: DocumentItem[] = [
-  {
-    title: "1. 身分證正本",
-    description:
-      "若未領身分證者，需附戶口名簿正、影本或3個月內戶籍謄本正本代替，身分證及戶口名簿正本驗畢退還須以外交部實際工作天為主。",
-  },
-  {
-    title: "2. 6 個月內 2吋彩色白底 實體照片1張",
-    description:
-      "晶片護照照片規格：頭頂到下巴距離需介於3.2公分至3.6公分之間，需露耳朵、眉毛，不可露齒、不可配戴粗框或有色鏡片之眼鏡，不得使用合成照片。",
-  },
-  { title: "3. 委任書" },
-  {
-    title: "4. 舊護照正本",
-    description: "首次申請免附；換發或部分情況需檢附。",
-  },
-];
-
-const DEFAULT_NOTES = [
-  {
-    title: "1. 身分證正本",
-    description:
-      "此辦證項目為年滿14歲之申請者辦理\n首次辦理護照需已做人別確認的簡式護照資料表才能代送\n役男【115年度為96年次~79年次出生尚未當兵之男子，含僑民役男】、國軍人員及替代現役出國須申請出境核准\n辦證天數：約 11 個工作天（代辦約加6個工作天）\n辦證費用：TWD 1,800\n入境可停留天數：由移民官決定\n效期及入境次數：以外交部核發為準最長10年\n備註:\n為收齊證件後一日開始申辦證照流程 需要辦理天數為辦證天數加上代辦工作天，不含繳件日及證照寄回指定取件人之日期 如遇特殊原因，將以服務人員與您聯繫為主",
-  },
-  {
-    title: "委任書",
-    description:
-      "★護照委任書說明\n‧本人(申請者或監護人)親自送件給旅行社辦證，請填寫『D式委任書』 D式委任書-未成年監護人委任範例：7歲以上未滿18歲且未婚者，由監護人委任旅行社辦證 E式委任書-成年者範例：年滿18歲以上或未滿18歲但已結婚者，本人以複委託方式由親屬、同事、同學委託旅行社辦證 E式委任書-未成年直接委任範例：7歲以上未滿18歲且未婚者，由監護人同意申請人自行以複委託方式由親屬、同事、同學委託旅行社辦證\n‧若申請人為7歲以上未滿18歲且未婚者，可由 -「監護人」委任或以複委託方式送件給旅行社辦證 -或監護人同意「申請者」自行委任或以複委託方式送件給旅行社辦證\n‧若申請人為未滿7歲或受監護宣告者 -只能由「監護人」委任或以複委託方式送件給旅行社辦證",
-  },
-];
-
-const DEFAULT_DOWNLOADS: DownloadItem[] = [
-  {
-    title: "護照申請書",
-    description: "首次申辦或效期已過須換發者，請下載並填寫本申請書，連同其他文件一併送件。",
-    downloadLabel: "下載護照申請書",
-  },
-  {
-    title: "簡式護照資料表",
-    description: "首次辦理護照者，需檢附已完成人別確認之簡式護照資料表，方能代為送件。",
-    downloadLabel: "下載簡式護照資料表",
-  },
-  {
-    title: "D 式委任書",
-    description: "未成年申請人（7 歲以上未滿 18 歲且未婚）由監護人委任本公司辦證時使用。",
-    downloadLabel: "下載 D 式委任書",
-  },
-  {
-    title: "E 式委任書",
-    description: "已成年申請人，或監護人同意由申請人自行複委託親屬、同事、同學送件時使用。",
-    downloadLabel: "下載 E 式委任書",
-  },
-];
+const HTML_CLASS =
+  "text-[13px] leading-[1.6] text-[#535F71] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5";
 
 export default function ServiceDetailDrawer({
   row,
@@ -84,13 +33,15 @@ export default function ServiceDetailDrawer({
   row: ServiceRow | null;
   onClose: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<DrawerTab>("documents");
+  const { data: footer } = useFooter();
+  const tabs = row ? visibleTabs(row.detail) : [];
+  const [activeTab, setActiveTab] = useState<DrawerTab | null>(null);
 
-  // Open each service on the documents tab.
+  // Open each service on its first visible tab.
   const [prevRow, setPrevRow] = useState(row);
   if (row !== prevRow) {
     setPrevRow(row);
-    if (row) setActiveTab("documents");
+    if (row) setActiveTab(visibleTabs(row.detail)[0] ?? null);
   }
 
   useEffect(() => {
@@ -130,7 +81,7 @@ export default function ServiceDetailDrawer({
             <div className="flex items-start justify-between gap-4">
               <div className="flex max-w-[500px] flex-col gap-1.5">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#0053E0]">
-                  PASSPORT SERVICE
+                  {row.kind === "passport" ? "PASSPORT SERVICE" : "VISA SERVICE"}
                 </span>
                 <h2 className="font-serif text-xl font-bold leading-[1.45] text-[#090909] sm:text-[25px]">
                   {row.item}
@@ -159,66 +110,73 @@ export default function ServiceDetailDrawer({
               <QuickFact label="證件效期" value={row.validity} />
             </div>
 
-            <div className="flex rounded-t-2xl border-b border-[#E0E3E8] bg-[#F8FAFC]">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex h-12 w-[200px] max-w-[33.33%] cursor-pointer items-center justify-center px-5 text-sm tracking-[0.0571em] ${
-                    activeTab === tab.id
-                      ? "border-b-[3px] border-[#0053E0] bg-[#ECF1FA] font-bold text-[#002366]"
-                      : "font-medium text-[#535F71] hover:text-slate-700"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            {tabs.length > 0 && (
+              <div className="flex rounded-t-2xl border-b border-[#E0E3E8] bg-[#F8FAFC]">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex h-12 w-[200px] max-w-[33.33%] cursor-pointer items-center justify-center px-5 text-sm tracking-[0.0571em] ${
+                      activeTab === tab
+                        ? "border-b-[3px] border-[#0053E0] bg-[#ECF1FA] font-bold text-[#002366]"
+                        : "font-medium text-[#535F71] hover:text-slate-700"
+                    }`}
+                  >
+                    {TAB_LABELS[tab]}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div>
               {activeTab === "documents" && (
                 <div className="flex flex-col gap-3">
                   <h3 className="font-serif text-lg font-bold text-[#090909] sm:text-xl">
-                    需準備文件清單
+                    {row.detail.required_docs_title || TAB_LABELS.documents}
                   </h3>
-                  <div className="flex flex-col">
-                    {DEFAULT_DOCUMENTS.map((doc) => (
-                      <div
-                        key={doc.title}
-                        className="flex flex-col gap-1 border-b border-[#E0E3E8] py-5 last:border-b-0"
-                      >
-                        <p className="text-sm font-bold leading-[1.5] text-[#090909]">
-                          {doc.title}
-                        </p>
-                        {doc.description && (
-                          <p className="text-[13px] leading-[1.6] text-[#535F71]">
-                            {doc.description}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  {row.detail.required_docs.length > 0 && (
+                    <div className="flex flex-col">
+                      {row.detail.required_docs.map((doc, i) => (
+                        <div
+                          key={i}
+                          className="flex flex-col gap-[5px] border-b border-[#E0E3E8] pb-5 pt-2"
+                        >
+                          <p className="text-sm font-bold leading-[1.5] text-[#090909]">{doc.title}</p>
+                          {!isBlankHtml(doc.body_html) && (
+                            <div className={HTML_CLASS} dangerouslySetInnerHTML={{ __html: doc.body_html }} />
+                          )}
+                          {doc.downloads.length > 0 && (
+                            <div className="flex flex-wrap gap-2.5 pt-2">
+                              {doc.downloads.map((file, j) => (
+                                <DownloadButton key={j} file={file} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeTab === "notes" && (
                 <div className="flex flex-col gap-3">
                   <h3 className="font-serif text-lg font-bold text-[#090909] sm:text-xl">
-                    辦證須知
+                    {row.detail.notice_title || TAB_LABELS.notes}
                   </h3>
                   <div className="flex flex-col">
-                    {DEFAULT_NOTES.map((note) => (
+                    {noticeDocsOf(row.detail).map((doc, i) => (
                       <div
-                        key={note.title}
-                        className="flex flex-col gap-1 border-b border-[#E0E3E8] py-5 last:border-b-0"
+                        key={i}
+                        className="flex flex-col gap-[5px] border-b border-[#E0E3E8] pb-5 pt-2"
                       >
-                        <p className="text-sm font-bold leading-[1.5] text-[#090909]">
-                          {note.title}
-                        </p>
-                        <p className="whitespace-pre-line text-[13px] leading-[1.6] text-[#535F71]">
-                          {note.description}
-                        </p>
+                        {doc.title && (
+                          <p className="text-sm font-bold leading-[1.5] text-[#090909]">{doc.title}</p>
+                        )}
+                        {!isBlankHtml(doc.body_html) && (
+                          <div className={HTML_CLASS} dangerouslySetInnerHTML={{ __html: doc.body_html }} />
+                        )}
                       </div>
                     ))}
                   </div>
@@ -228,36 +186,22 @@ export default function ServiceDetailDrawer({
               {activeTab === "downloads" && (
                 <div className="flex flex-col gap-3">
                   <h3 className="font-serif text-lg font-bold text-[#090909] sm:text-xl">
-                    文件下載
+                    {TAB_LABELS.downloads}
                   </h3>
                   <div className="flex flex-col">
-                    {DEFAULT_DOWNLOADS.map((doc) => (
+                    {row.detail.downloads.map((file, i) => (
                       <div
-                        key={doc.title}
-                        className="flex h-[118px] flex-col gap-1 border-b border-[#E0E3E8] py-2 last:border-b-0"
+                        key={i}
+                        className="flex flex-col gap-[5px] border-b border-[#E0E3E8] pb-5 pt-2"
                       >
-                        <p className="text-sm font-bold leading-[1.5] text-[#090909]">
-                          {doc.title}
-                        </p>
-                        <p className="text-[13px] leading-[1.6] text-[#535F71]">
-                          {doc.description}
-                        </p>
-                        <div className="flex gap-2.5 pt-1">
-                          <button
-                            type="button"
-                            className="flex h-[38px] cursor-pointer items-center justify-center gap-2 rounded-full border border-[#C3C6D6] bg-white px-5 text-xs font-medium text-[#0053E0] hover:bg-[#F5F8FF]"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                              <path
-                                d="M8 2V10M8 10L5 7M8 10L11 7M3 13H13"
-                                stroke="#0053E0"
-                                strokeWidth="1.4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            {doc.downloadLabel}
-                          </button>
+                        {file.title && (
+                          <p className="text-sm font-bold leading-[21px] text-[#090909]">{file.title}</p>
+                        )}
+                        {file.description && (
+                          <p className="text-[13px] leading-[21px] text-[#535F71]">{file.description}</p>
+                        )}
+                        <div className="flex gap-2.5">
+                          <DownloadButton file={file} />
                         </div>
                       </div>
                     ))}
@@ -273,14 +217,16 @@ export default function ServiceDetailDrawer({
               </p>
               <div className="flex flex-col gap-4 sm:flex-row">
                 <a
-                  href="#"
+                  href={footer?.line_url || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#0053E0] text-[13px] font-bold text-white hover:bg-[#0047c2]"
                 >
                   <Image src="/images/visa-chat-icon.svg" alt="" width={18} height={18} />
                   LINE 線上預約
                 </a>
                 <a
-                  href="tel:"
+                  href={footer?.phone ? `tel:${footer.phone}` : "#"}
                   className="flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#0053E0] bg-white text-[13px] font-bold text-[#0053E0] hover:bg-[#F5F8FF]"
                 >
                   <Image src="/images/phone-call.svg" alt="" width={18} height={18} />
@@ -313,5 +259,29 @@ function QuickFact({
         {value}
       </span>
     </div>
+  );
+}
+
+function DownloadButton({ file }: { file: VisaDownload }) {
+  if (!file.url) return null;
+  return (
+    <a
+      href={file.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      download
+      className="flex h-[38px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#C3C6D6] bg-white px-5 text-xs font-medium text-[#0053E0] hover:bg-[#F5F8FF]"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path
+          d="M8 2V10M8 10L5 7M8 10L11 7M3 13H13"
+          stroke="#0053E0"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {file.label}
+    </a>
   );
 }

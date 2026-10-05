@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type RichTextEditorProps = {
   value: string;
@@ -159,6 +159,14 @@ const EditableSurface = memo(
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [initialHtml] = useState(value);
+
+  // EditableSurface never re-renders, so it must not hold on to the first render's onChange:
+  // that closure carries the parent's state from mount time and would overwrite later edits.
+  const onChangeRef = useRef(onChange);
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange;
+  });
+  const handleInput = useCallback((html: string) => onChangeRef.current(html), []);
   const [activeColor, setActiveColor] = useState(TEXT_COLORS[0].value);
 
   const ensureSelectionInEditor = () => {
@@ -253,7 +261,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       <EditableSurface
         editorRef={editorRef}
         initialHtml={initialHtml}
-        onInput={onChange}
+        onInput={handleInput}
         placeholder={placeholder}
       />
     </div>

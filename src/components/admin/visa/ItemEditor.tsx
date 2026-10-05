@@ -3,33 +3,32 @@
 import { useState } from "react";
 import AdminTextInput from "../ui/AdminTextInput";
 import ToggleSwitch from "../ui/ToggleSwitch";
-import DrawerTabEditor from "./DrawerTabEditor";
-import type { ServiceItem } from "./data";
+import DrawerTabEditor, { DRAWER_TABS, type DrawerTabKey } from "./DrawerTabEditor";
+import type { EditableDetail, EditableServiceItem, FieldConfig } from "./data";
 
-export default function ItemEditor({
+const VISIBLE_KEYS: Record<DrawerTabKey, "required_docs_visible" | "notice_visible" | "downloads_visible"> = {
+  documents: "required_docs_visible",
+  notice: "notice_visible",
+  downloads: "downloads_visible",
+};
+
+export default function ItemEditor<T extends EditableServiceItem>({
   item,
   index,
+  fields,
   onChange,
   onDelete,
 }: {
-  item: ServiceItem;
+  item: T;
   index: number;
-  onChange: (patch: Partial<ServiceItem>) => void;
+  fields: FieldConfig<T>;
+  onChange: (patch: Partial<T>) => void;
   onDelete?: () => void;
 }) {
-  const [activeDrawerTabId, setActiveDrawerTabId] = useState(item.drawerTabs[0]?.id ?? "");
-  const activeDrawerTab = item.drawerTabs.find((tab) => tab.id === activeDrawerTabId) ?? item.drawerTabs[0];
+  const [activeDrawerTab, setActiveDrawerTab] = useState<DrawerTabKey>("documents");
 
-  const updateField = (fieldIndex: number, value: string) => {
-    onChange({
-      fields: item.fields.map((field, i) => (i === fieldIndex ? { ...field, value } : field)),
-    });
-  };
-
-  const updateDrawerTab = (id: string, patch: Partial<ServiceItem["drawerTabs"][number]>) => {
-    onChange({
-      drawerTabs: item.drawerTabs.map((tab) => (tab.id === id ? { ...tab, ...patch } : tab)),
-    });
+  const updateDetail = (patch: Partial<EditableDetail>) => {
+    onChange({ detail: { ...item.detail, ...patch } } as Partial<T>);
   };
 
   return (
@@ -55,15 +54,15 @@ export default function ItemEditor({
         </div>
       </div>
 
-      <AdminTextInput label="項目名稱" value={item.name} onChange={(name) => onChange({ name })} />
+      <AdminTextInput label="項目名稱" value={item.name} onChange={(name) => onChange({ name } as Partial<T>)} />
 
       <div className="grid grid-cols-3 gap-4">
-        {item.fields.map((field, fieldIndex) => (
+        {fields.map((field) => (
           <AdminTextInput
-            key={field.label}
+            key={field.key}
             label={field.label}
-            value={field.value}
-            onChange={(value) => updateField(fieldIndex, value)}
+            value={String(item[field.key] ?? "")}
+            onChange={(value) => onChange({ [field.key]: value } as Partial<T>)}
           />
         ))}
       </div>
@@ -79,18 +78,19 @@ export default function ItemEditor({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {item.drawerTabs.map((tab) => {
-            const active = tab.id === activeDrawerTab?.id;
+          {DRAWER_TABS.map((tab) => {
+            const active = tab.key === activeDrawerTab;
+            const visibleKey = VISIBLE_KEYS[tab.key];
             return (
               <div
-                key={tab.id}
+                key={tab.key}
                 className={`flex h-[52px] items-center justify-between rounded-[10px] border px-3 py-2 ${
                   active ? "border-[#0053E0] bg-[#ECF1FA]" : "border-[#E0E3E8] bg-white"
                 }`}
               >
                 <button
                   type="button"
-                  onClick={() => setActiveDrawerTabId(tab.id)}
+                  onClick={() => setActiveDrawerTab(tab.key)}
                   className={`flex h-9 w-[102px] cursor-pointer items-center whitespace-nowrap px-[7px] text-[13px] leading-[1.45em] ${
                     active ? "font-bold text-[#0053E0]" : "font-medium text-[#090909]"
                   }`}
@@ -99,8 +99,8 @@ export default function ItemEditor({
                 </button>
                 <div className="flex h-9 items-center justify-center p-1.5">
                   <ToggleSwitch
-                    checked={tab.visible}
-                    onChange={() => updateDrawerTab(tab.id, { visible: !tab.visible })}
+                    checked={item.detail[visibleKey]}
+                    onChange={() => updateDetail({ [visibleKey]: !item.detail[visibleKey] })}
                     label={`切換${tab.label}顯示於前台`}
                   />
                 </div>
@@ -109,13 +109,7 @@ export default function ItemEditor({
           })}
         </div>
 
-        {activeDrawerTab && (
-          <DrawerTabEditor
-            tab={activeDrawerTab}
-            otherTabLabels={item.drawerTabs.filter((t) => t.id !== activeDrawerTab.id).map((t) => t.label)}
-            onChange={(patch) => updateDrawerTab(activeDrawerTab.id, patch)}
-          />
-        )}
+        <DrawerTabEditor tab={activeDrawerTab} detail={item.detail} onChange={updateDetail} />
       </div>
     </div>
   );
