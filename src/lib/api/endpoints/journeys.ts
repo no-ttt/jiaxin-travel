@@ -1,9 +1,17 @@
 import { apiFetch } from "../client";
-import type { AlbumAppendIn, AlbumReplaceIn, Journey, JourneyIn } from "../types/journey";
+import { toItems, type ItemsResponse } from "../types/common";
+import type {
+  Album,
+  AlbumAppendIn,
+  AlbumReplaceIn,
+  Journey,
+  JourneyIn,
+  PublicJourneyList,
+} from "../types/journey";
 
 export const journeysApi = {
   // admin:journeys
-  list: () => apiFetch<Journey[]>("/admin/journeys"),
+  list: async () => toItems(await apiFetch<Journey[] | ItemsResponse<Journey>>("/admin/journeys")),
 
   create: (payload: JourneyIn) =>
     apiFetch<Journey>("/admin/journeys", { method: "POST", body: payload }),
@@ -14,8 +22,7 @@ export const journeysApi = {
   remove: (journeyId: string) =>
     apiFetch<void>(`/admin/journeys/${journeyId}`, { method: "DELETE" }),
 
-  getAlbum: (journeyId: string) =>
-    apiFetch<AlbumReplaceIn>(`/admin/journeys/${journeyId}/album`),
+  getAlbum: (journeyId: string) => apiFetch<Album>(`/admin/journeys/${journeyId}/album`),
 
   replaceAlbum: (journeyId: string, payload: AlbumReplaceIn) =>
     apiFetch<void>(`/admin/journeys/${journeyId}/album`, { method: "PUT", body: payload }),
@@ -27,8 +34,8 @@ export const journeysApi = {
     }),
 
   // public:journeys
-  publicList: () => apiFetch<Journey[]>("/public/journeys", { auth: false }),
+  publicList: () => apiFetch<PublicJourneyList>("/public/journeys", { auth: false }),
 
   publicAlbum: (journeyId: string) =>
-    apiFetch<AlbumReplaceIn>(`/public/journeys/${journeyId}/album`, { auth: false }),
+    apiFetch<Album>(`/public/journeys/${journeyId}/album`, { auth: false }),
 };

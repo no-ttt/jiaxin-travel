@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { mediaApi } from "../endpoints/media";
-import { uploadMedia } from "../upload";
-import type { MediaPurpose } from "../types/media";
+import { uploadMedia, type UploadPurpose } from "../upload";
 
 export const mediaKey = (mediaId: string) => ["media", mediaId] as const;
 
@@ -14,7 +13,7 @@ export function useMedia(mediaId: string | null | undefined) {
   });
 }
 
-export function useUploadMedia(purpose: MediaPurpose) {
+export function useUploadMedia(purpose: UploadPurpose) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (file: File) => uploadMedia(file, purpose),

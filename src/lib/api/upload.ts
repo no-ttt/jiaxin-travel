@@ -1,6 +1,12 @@
 import { mediaApi } from "./endpoints/media";
 import type { Media, MediaPurpose } from "./types/media";
 
+/** "auto" picks video for video files and image for everything else (e.g. mixed album uploads). */
+export type UploadPurpose = MediaPurpose | "auto";
+
+export const resolvePurpose = (file: File, purpose: UploadPurpose): MediaPurpose =>
+  purpose === "auto" ? (file.type.startsWith("video/") ? "video" : "image") : purpose;
+
 /**
  * Presigned upload flow:
  * 1. POST /admin/media/uploads → media_id + upload.url / upload.headers (valid ~15 min)
@@ -8,10 +14,10 @@ import type { Media, MediaPurpose } from "./types/media";
  * 3. POST /admin/media/complete — required; the backend validates the file and builds variants
  * The caller then stores media.id in the document field (e.g. banners[].media_id) and saves.
  */
-export async function uploadMedia(file: File, purpose: MediaPurpose): Promise<Media> {
+export async function uploadMedia(file: File, purpose: UploadPurpose): Promise<Media> {
   const mime = file.type || "application/octet-stream";
   const { items } = await mediaApi.requestUploads({
-    items: [{ purpose, mime, filename: file.name }],
+    items: [{ purpose: resolvePurpose(file, purpose), mime, filename: file.name }],
   });
   const target = items[0];
   if (!target) throw new Error("無法取得上傳位置，請稍後再試");

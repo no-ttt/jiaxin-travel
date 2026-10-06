@@ -1,37 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import AdminInfoNote from "../ui/AdminInfoNote";
 import AdminSectionCard from "../ui/AdminSectionCard";
-import { generateId } from "../ui/generateId";
 import ItemEditor from "./ItemEditor";
 import TabManager from "./TabManager";
-import { createJourneyCard, type JourneyCard } from "./data";
+import { createJourneyCard, type CardPatch, type JourneyCard } from "./data";
 
 export default function JourneyCardsSection({
   items,
   onItemsChange,
 }: {
   items: JourneyCard[];
-  onItemsChange: (items: JourneyCard[]) => void;
+  /** Functional, so uploads finishing later append to the latest draft. */
+  onItemsChange: (updater: (items: JourneyCard[]) => JourneyCard[]) => void;
 }) {
-  const [activeItemId, setActiveItemId] = useState(items[0]?.id ?? "");
-  const activeItem = items.find((item) => item.id === activeItemId) ?? items[0];
+  const [activeKey, setActiveKey] = useState(items[0]?.key ?? "");
+  const activeItem = items.find((item) => item.key === activeKey) ?? items[0];
 
-  const updateItem = (id: string, patch: Partial<JourneyCard>) => {
-    onItemsChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  const updateItem = (key: string, patch: CardPatch) => {
+    onItemsChange((prev) =>
+      prev.map((item) =>
+        item.key === key ? { ...item, ...(typeof patch === "function" ? patch(item) : patch) } : item
+      )
+    );
   };
 
   const addItem = () => {
-    const newItem = createJourneyCard(generateId("journey"));
-    onItemsChange([...items, newItem]);
-    setActiveItemId(newItem.id);
+    const newItem = createJourneyCard();
+    onItemsChange((prev) => [...prev, newItem]);
+    setActiveKey(newItem.key);
   };
 
-  const deleteItem = (id: string) => {
-    const remaining = items.filter((item) => item.id !== id);
-    onItemsChange(remaining);
-    if (activeItemId === id) setActiveItemId(remaining[0]?.id ?? "");
+  const deleteItem = (key: string) => {
+    const remaining = items.filter((item) => item.key !== key);
+    onItemsChange((prev) => prev.filter((item) => item.key !== key));
+    if (activeKey === key) setActiveKey(remaining[0]?.key ?? "");
   };
 
   return (
@@ -42,27 +45,21 @@ export default function JourneyCardsSection({
       <TabManager
         title="項目管理"
         description={`目前 ${items.length} 個旅程卡片，可個別開關顯示、編輯內容。`}
-        tabs={items.map((item) => ({ id: item.id, name: item.name, visible: item.visible }))}
-        activeId={activeItem?.id ?? ""}
-        onSelect={setActiveItemId}
-        onToggleVisible={(id) => {
-          const item = items.find((i) => i.id === id);
-          if (item) updateItem(id, { visible: !item.visible });
-        }}
+        tabs={items.map((item) => ({ id: item.key, name: item.name, visible: item.visible }))}
+        activeId={activeItem?.key ?? ""}
+        onSelect={setActiveKey}
+        onToggleVisible={(key) => updateItem(key, (item) => ({ visible: !item.visible }))}
         onAdd={addItem}
       />
 
       {activeItem && (
         <ItemEditor
+          key={activeItem.key}
           item={activeItem}
-          onChange={(patch) => updateItem(activeItem.id, patch)}
-          onDelete={items.length > 1 ? () => deleteItem(activeItem.id) : undefined}
+          onChange={(patch) => updateItem(activeItem.key, patch)}
+          onDelete={() => deleteItem(activeItem.key)}
         />
       )}
-
-      <AdminInfoNote>
-        其餘 7 個旅程卡片（含「更多旅程故事」展開後的卡片）與各自相簿內的相片／影片編輯方式與此範例相同；媒體以批次上傳、可個別填寫說明的方式管理。
-      </AdminInfoNote>
     </AdminSectionCard>
   );
 }

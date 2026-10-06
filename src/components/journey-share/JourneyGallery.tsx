@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import JourneyCard from "./JourneyCard";
 import JourneyAlbumOverlay from "./JourneyAlbumOverlay";
-import { JOURNEY_STORIES, type JourneyStory } from "./data";
+import type { JourneyStory } from "./data";
 
 const INITIAL_COUNT = 8;
 const LOAD_MORE_COUNT = 6;
@@ -17,12 +17,12 @@ function chunk<T>(items: T[], size: number): T[][] {
   return rows;
 }
 
-export default function JourneyGallery() {
+export default function JourneyGallery({ stories }: { stories: JourneyStory[] }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
   const [openStory, setOpenStory] = useState<JourneyStory | null>(null);
-  const visibleStories = JOURNEY_STORIES.slice(0, visibleCount);
+  const visibleStories = stories.slice(0, visibleCount);
   const rows = chunk(visibleStories, 2);
-  const hasMore = visibleCount < JOURNEY_STORIES.length;
+  const hasMore = visibleCount < stories.length;
 
   return (
     <section className="flex flex-col items-center gap-6 bg-[#FAFAFA] px-4 pb-14 pt-6 sm:px-8 lg:px-[120px] lg:pb-[72px]">
@@ -58,7 +58,7 @@ export default function JourneyGallery() {
       {hasMore && (
         <button
           type="button"
-          onClick={() => setVisibleCount((count) => Math.min(count + LOAD_MORE_COUNT, JOURNEY_STORIES.length))}
+          onClick={() => setVisibleCount((count) => Math.min(count + LOAD_MORE_COUNT, stories.length))}
           className="flex w-full max-w-[1200px] cursor-pointer items-center justify-center gap-[18px] py-6"
         >
           <span className="h-px flex-1 max-w-[280px] bg-[#E0E3E8]" />

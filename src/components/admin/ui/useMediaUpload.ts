@@ -2,10 +2,10 @@
 
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { useUploadMedia } from "@/lib/api/hooks/useMedia";
-import type { MediaPurpose } from "@/lib/api/types/media";
+import type { UploadPurpose } from "@/lib/api/upload";
 
 /** Wires a hidden file input + drag-and-drop to the presigned media upload flow. */
-export function useMediaUpload(purpose: MediaPurpose, onUploaded?: (mediaId: string) => void) {
+export function useMediaUpload(purpose: UploadPurpose, onUploaded?: (mediaId: string) => void) {
   const inputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadMedia(purpose);
   const [error, setError] = useState<string | null>(null);

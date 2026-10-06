@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import type { JourneyStory } from "./data";
+import { usePublicJourneyAlbum } from "@/lib/api/hooks/useJourneys";
+import { toAlbumPhotos, type JourneyAlbumPhoto, type JourneyStory } from "./data";
 
 function getOffset(index: number, activeIndex: number, length: number) {
   let offset = index - activeIndex;
@@ -35,6 +36,32 @@ function slideStyle(offset: number): React.CSSProperties {
   };
 }
 
+/** The centered video plays with controls; side slides only show its poster or first frame. */
+function AlbumMedia({ photo, isCenter, alt }: { photo: JourneyAlbumPhoto; isCenter: boolean; alt: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  // Sliding away keeps the element mounted as a side slide, so stop it playing.
+  useEffect(() => {
+    if (!isCenter) videoRef.current?.pause();
+  }, [isCenter]);
+
+  if (photo.isVideo && photo.videoUrl && (isCenter || !photo.imageUrl)) {
+    return (
+      <video
+        ref={videoRef}
+        src={photo.videoUrl}
+        poster={photo.imageUrl ?? undefined}
+        controls={isCenter}
+        muted={!isCenter}
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 h-full w-full bg-black object-cover"
+      />
+    );
+  }
+  if (!photo.imageUrl) return null;
+  return <Image src={photo.imageUrl} alt={alt} fill priority={isCenter} className="object-cover" />;
+}
+
 export default function JourneyAlbumOverlay({
   story,
   onClose,
@@ -43,7 +70,11 @@ export default function JourneyAlbumOverlay({
   onClose: () => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const album = story?.album ?? (story ? [{ image: story.image, title: story.title, description: story.quote }] : []);
+  const { data: albumData } = usePublicJourneyAlbum(story?.id ?? null);
+  const photos = toAlbumPhotos(albumData);
+  // Until the album loads (or when it is empty) the cover stands in as the only photo.
+  const coverPhoto: JourneyAlbumPhoto[] = story?.cover ? [{ ...story.cover, key: "cover", caption: "" }] : [];
+  const album = photos.length > 0 ? photos : coverPhoto;
   const isOpen = story !== null;
 
   // Start from the first photo whenever a different story opens.
@@ -53,8 +84,22 @@ export default function JourneyAlbumOverlay({
     if (story) setActiveIndex(0);
   }
 
-  const goPrev = () => setActiveIndex((i) => (i - 1 + album.length) % album.length);
-  const goNext = () => setActiveIndex((i) => (i + 1) % album.length);
+  // Same rule as the arrow buttons: nothing to switch to with fewer than two photos.
+  const goPrev = () => {
+    if (album.length > 1) setActiveIndex((i) => (i - 1 + album.length) % album.length);
+  };
+  const goNext = () => {
+    if (album.length > 1) setActiveIndex((i) => (i + 1) % album.length);
+  };
+
+  // Scroll lock only follows open/close, so the album loading in doesn't briefly unlock the page.
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,17 +110,14 @@ export default function JourneyAlbumOverlay({
       if (event.key === "ArrowRight") goNext();
     };
     document.addEventListener("keydown", onKeyDown);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = "";
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, onClose, album.length]);
 
   if (!isOpen || !story) return null;
 
-  const current = album[activeIndex];
+  const current: JourneyAlbumPhoto | undefined = album[activeIndex];
+  const title = albumData?.album_title || story.albumTitle || story.title;
 
   return (
     <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-r from-[#060d17] via-[#0b131f] to-[#0e1114] animate-[journey-album-fade-in_0.25s_ease]">
@@ -84,7 +126,7 @@ export default function JourneyAlbumOverlay({
           <span className="text-[11px] font-semibold tracking-[0.1818em] text-[#99C2FF]">
             JOURNEY ALBUM
           </span>
-          <h2 className="font-serif text-xl font-bold text-white sm:text-[27px]">{story.title}</h2>
+          <h2 className="font-serif text-xl font-bold text-white sm:text-[27px]">{title}</h2>
         </div>
 
         <div className="flex items-center gap-3.5">
@@ -119,7 +161,7 @@ export default function JourneyAlbumOverlay({
 
           return (
             <div
-              key={photo.image + index}
+              key={photo.key}
               aria-hidden={!isCenter}
               style={{
                 position: "absolute",
@@ -136,7 +178,7 @@ export default function JourneyAlbumOverlay({
                   : "pointer-events-none hidden border-white/[0.16] lg:block"
               }`}
             >
-              <Image src={photo.image} alt={isCenter ? current.title : ""} fill priority={isCenter} className="object-cover" />
+              <AlbumMedia photo={photo} isCenter={isCenter} alt={isCenter ? photo.caption || title : ""} />
             </div>
           );
         })}
@@ -165,8 +207,9 @@ export default function JourneyAlbumOverlay({
 
       <div className="mx-4 mb-6 flex h-[118px] w-[calc(100%-2rem)] max-w-[780px] shrink-0 flex-col justify-center gap-4 self-center overflow-hidden rounded-[20px] border border-white/[0.15] bg-[rgba(137,165,250,0.2)] px-5 py-[18px] sm:flex-row sm:items-center sm:justify-between sm:px-[24px] sm:py-[18px]">
         <div key={`caption-${activeIndex}`} className="flex max-w-[565px] flex-col gap-[5px] overflow-hidden animate-[journey-album-fade-in_0.3s_ease]">
-          <h3 className="truncate text-base font-bold text-white">{current.title}</h3>
-          <p className="line-clamp-2 text-[13px] leading-[1.65] text-white/90">{current.description}</p>
+          {current?.caption && (
+            <p className="line-clamp-2 text-base font-bold leading-[1.65] text-white">{current.caption}</p>
+          )}
         </div>
         {album.length > 1 && (
           <span className="text-[11px] text-[#ABCCFF] sm:shrink-0 sm:text-right">左右鍵或 Swipe 滑動</span>

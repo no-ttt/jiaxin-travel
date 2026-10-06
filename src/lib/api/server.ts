@@ -12,6 +12,7 @@ import type {
   VisaServices,
 } from "./types/cms";
 import type { PublicCollection } from "./types/collection";
+import type { PublicJourneyList } from "./types/journey";
 import type { PublicTripDetail } from "./types/trip";
 
 /**
@@ -67,6 +68,9 @@ export const getPublicTrip = (tripCode: string) =>
   cmsFetch<PublicTripDetail>(`/public/trips/${encodeURIComponent(tripCode)}`, {
     tags: ["trips", `trip:${tripCode}`],
   });
+
+export const getPublicJourneys = () =>
+  cmsFetch<PublicJourneyList>("/public/journeys", { tags: ["journeys"] });
 
 /** First page of a collection (e.g. slug "theme-1"); later pages load in the browser. */
 export const getPublicCollection = (slug: string) =>
