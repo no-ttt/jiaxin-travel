@@ -60,8 +60,14 @@ export function parseSearchParams(params: URLSearchParams): SearchUrlState {
 export function toApiParams(state: SearchUrlState, regions: NavRegion[]): PublicTripSearchParams {
   const destination = state.destination.trim();
   const keyword = state.keyword.trim();
-  const region = destination
-    ? regions.find((r) => destination.includes(r.name) || r.name.includes(destination))
+  // Ignore 「/」 and spaces so 「香港澳門」 still matches the region 「香港/澳門」.
+  const normalize = (text: string) => text.replace(/[\s/／]/g, "");
+  const target = normalize(destination);
+  const region = target
+    ? regions.find((r) => {
+        const name = normalize(r.name);
+        return target.includes(name) || name.includes(target);
+      })
     : undefined;
 
   return {

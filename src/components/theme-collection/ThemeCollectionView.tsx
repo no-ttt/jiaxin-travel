@@ -91,7 +91,7 @@ export default function ThemeCollectionView({
                     style={{ backgroundColor: collection.button_color ?? DEFAULT_BUTTON_COLOR }}
                   >
                     {isLoadingMore ? "載入中…" : "查看更多行程"}
-                    {!isLoadingMore && <Image src="/images/more-arrow-icon.svg" alt="" width={14} height={14} />}
+                    {!isLoadingMore && <Image src="/images/more-arrow-down-icon.svg" alt="" width={14} height={14} />}
                   </button>
                   {loadMoreFailed && <p className="text-sm text-[#F97066]">載入失敗，請再試一次</p>}
                 </div>

@@ -61,7 +61,11 @@ export default function AboutPage() {
         <AboutHero />
         <CorePillars />
         <TrustCredentials />
-        <TestimonialCarousel testimonials={TESTIMONIALS} />
+        <div className="bg-white">
+          <div className="mx-auto max-w-[1440px] overflow-hidden">
+            <TestimonialCarousel testimonials={TESTIMONIALS} />
+          </div>
+        </div>
         <AboutCtaSplit />
       </main>
 

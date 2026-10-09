@@ -239,12 +239,12 @@ export type PublicTripSearchParams = Partial<{
   zone: TripZone;
   /** "1-5" | "6-10" | "11-15" | "15+" */
   duration_bands: string[];
-  /** Format not confirmed yet — the backend ignored every value tried. */
+  /** "lt20k" | "20-40k" | "40-70k" | "70-120k" | "120k+"; any other value is a 422. */
   budget_bands: string[];
   departure_months: number[];
   date_from: string;
   date_to: string;
-  /** "popular" | "price_asc" | "price_desc" */
+  /** "popular" | "price_asc" | "price_desc" | "departure_date" */
   sort: string;
   page: number;
   limit: number;

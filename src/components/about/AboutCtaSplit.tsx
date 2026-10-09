@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function AboutCtaSplit() {
   return (
-    <section className="flex flex-col sm:flex-row">
+    <section className="mx-auto flex w-full max-w-[1440px] flex-col sm:flex-row">
       <Link
         href="/search"
         className="group relative flex h-[320px] flex-1 flex-col justify-center gap-4 overflow-hidden px-6 py-10 sm:h-[430px] sm:px-[92px]"

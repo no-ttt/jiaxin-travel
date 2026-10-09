@@ -22,7 +22,14 @@ export default function BannerSection({
   const addBanner = () => {
     setBanners((prev) => [
       ...prev,
-      { _id: generateId("banner"), title: "", subtitle: "", media_id: null, linkUrl: "" },
+      {
+        _id: generateId("banner"),
+        title: "",
+        subtitle: "",
+        media_id: null,
+        link_url: "",
+        open_in_new_tab: false,
+      },
     ]);
   };
 
@@ -71,8 +78,8 @@ export default function BannerSection({
           />
           <AdminTextInput
             label="連結網址"
-            value={banner.linkUrl}
-            onChange={(value) => updateBanner(banner._id, { linkUrl: value })}
+            value={banner.link_url}
+            onChange={(value) => updateBanner(banner._id, { link_url: value })}
           />
           <AdminImageDropzone
             fieldLabel="背景圖片"

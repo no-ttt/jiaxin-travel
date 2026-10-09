@@ -24,21 +24,7 @@ function splitAirlineFlight(text: string): { airline: string; flightNumber: stri
 }
 
 function toFlights(api: PublicTripDetail): FlightLeg[] {
-  const flights = api.flights ?? [];
-  const firstDate = flights[0]?.flight_date;
-  const lastDate = flights.at(-1)?.flight_date;
-  // The admin has no outbound/return field: legs flown on the last flight date (when it
-  // differs from the first) are the return trip. An explicit leg_label wins if present.
-  const isReturn = (date: string | null) =>
-    Boolean(date && lastDate && firstDate && lastDate !== firstDate && date === lastDate);
-
-  return flights.map((flight, index) => ({
-    direction:
-      flight.leg_label === "回程" || flight.leg_label === "去程"
-        ? flight.leg_label
-        : isReturn(flight.flight_date) || (index > 0 && index === flights.length - 1 && !firstDate)
-          ? "回程"
-          : "去程",
+  return (api.flights ?? []).map((flight) => ({
     date: slashDate(flight.flight_date),
     ...splitAirlineFlight(flight.airline_flight),
     departTime: flight.depart_time?.slice(0, 5) ?? "",
@@ -63,7 +49,7 @@ function toDays(api: PublicTripDetail): DayPlan[] {
       .map((option) => option.trim())
       .filter(Boolean),
     description: day.description,
-    image: mediaUrl(day.images[0]?.media, "card") ?? "",
+    images: day.images.flatMap((image) => mediaUrl(image.media, "card") ?? []),
   }));
 }
 

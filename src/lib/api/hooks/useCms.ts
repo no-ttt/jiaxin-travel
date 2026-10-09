@@ -28,6 +28,15 @@ export function useFooter() {
   });
 }
 
+/** 訂購流程; the footer reads `payment.visible` to hide its 匯款資訊 link. */
+export function usePurchaseFlow() {
+  return useQuery({
+    queryKey: ["public", "purchase-flow"],
+    queryFn: () => cmsApi.purchaseFlow(),
+    staleTime: 60_000,
+  });
+}
+
 export function useCmsDocument<T = Record<string, unknown>>(key: string) {
   return useQuery({
     queryKey: ["cms", key],

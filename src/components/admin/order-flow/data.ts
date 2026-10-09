@@ -38,7 +38,7 @@ export function toEditableOrderFlow(doc: PurchaseFlowPage): EditableOrderFlow {
       content: step.body_html,
     })),
     bankInfo: {
-      visible: doc.payment.visible ?? true,
+      visible: doc.payment.visible,
       accountName: doc.payment.account_name,
       bankName: doc.payment.bank_name,
       bankCode: doc.payment.bank_code,
@@ -52,7 +52,6 @@ export function toEditableOrderFlow(doc: PurchaseFlowPage): EditableOrderFlow {
 /** `base` is the server copy; fields the editor doesn't know about are kept as they are. */
 export function fromEditableOrderFlow(draft: EditableOrderFlow, base: PurchaseFlowPage): PurchaseFlowPage {
   const { steps, bankInfo, reminder } = draft;
-  const keepVisible = bankInfo.visible === false || base.payment.visible !== undefined;
   return {
     ...base,
     steps: steps.map((step, i) => ({
@@ -68,9 +67,7 @@ export function fromEditableOrderFlow(draft: EditableOrderFlow, base: PurchaseFl
       bank_code: bankInfo.bankCode,
       account_number: bankInfo.accountNumber,
       note_html: bankInfo.note,
-      // `visible` is not stored by the backend yet; only send it once it means something, so an
-      // untouched page does not count as edited.
-      ...(keepVisible ? { visible: bankInfo.visible } : {}),
+      visible: bankInfo.visible,
     },
     reminder_html: reminder.content,
   };

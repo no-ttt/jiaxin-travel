@@ -28,16 +28,13 @@ const DURATION_BANDS: Record<string, string> = {
   "15 天以上": "15+",
 };
 
-/**
- * Filter label → API `budget_bands` value. Unconfirmed: the backend ignored every format
- * tried, so this is a best guess pending the backend's answer.
- */
+/** Filter label → API `budget_bands` value (matched against price_from). */
 const BUDGET_BANDS: Record<string, string> = {
-  "20,000 以下": "0-20000",
-  "20,000–40,000": "20000-40000",
-  "40,000–70,000": "40000-70000",
-  "70,000–120,000": "70000-120000",
-  "120,000 以上": "120000+",
+  "20,000 以下": "lt20k",
+  "20,000–40,000": "20-40k",
+  "40,000–70,000": "40-70k",
+  "70,000–120,000": "70-120k",
+  "120,000 以上": "120k+",
 };
 
 /** Season label → API `departure_months`. */

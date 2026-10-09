@@ -7,7 +7,6 @@ export default function BookingProcessContent({ page }: { page: PurchaseFlowPage
   // The public API already drops hidden steps; empty ones are skipped too (as the admin note says).
   const steps = page.steps.filter((step) => step.visible !== false && !isBlankHtml(step.body_html));
   const { payment } = page;
-  const showPayment = payment.visible !== false;
 
   return (
     <div className="flex w-full max-w-[1200px] flex-col gap-6">
@@ -27,7 +26,7 @@ export default function BookingProcessContent({ page }: { page: PurchaseFlowPage
           </div>
         ))}
 
-        {showPayment && (
+        {payment.visible && (
           // Anchor for the footer's 匯款資訊 link (/terms#payment-info); scroll-mt clears the sticky header.
           <div
             id="payment-info"

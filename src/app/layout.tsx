@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
-import { getFooter, getNavigation } from "@/lib/api/server";
+import { getFooter, getNavigation, getPurchaseFlow } from "@/lib/api/server";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -24,6 +24,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   await Promise.all([
     queryClient.prefetchQuery({ queryKey: ["public", "navigation"], queryFn: getNavigation }),
     queryClient.prefetchQuery({ queryKey: ["public", "footer"], queryFn: getFooter }),
+    // The footer hides its 匯款資訊 link while 訂購流程's payment block is switched off.
+    queryClient.prefetchQuery({ queryKey: ["public", "purchase-flow"], queryFn: getPurchaseFlow }),
   ]);
 
   return (

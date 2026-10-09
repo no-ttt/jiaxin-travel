@@ -11,11 +11,7 @@ import {
 import { generateId } from "../ui/generateId";
 
 /** Admin-side editable shapes: API rows plus a client-only `_id` for React keys. */
-export type BannerItem = HomepageDocBanner & {
-  _id: string;
-  /** UI-only: the API has no banner link field yet, so this is never saved. */
-  linkUrl: string;
-};
+export type BannerItem = HomepageDocBanner & { _id: string };
 export type StoryVideo = HomepageDocVideo & { _id: string };
 export type FeatureCard = HomepageDocBrandFeature & { _id: string };
 export type TestimonialItem = HomepageDocTestimonial & { _id: string };
@@ -32,7 +28,12 @@ export type EditableHomepage = {
 
 export function toEditableHomepage(doc: HomepageDoc): EditableHomepage {
   return {
-    banners: doc.banners.map((item) => ({ ...item, _id: generateId("banner"), linkUrl: "" })),
+    banners: doc.banners.map((item) => ({
+      ...item,
+      link_url: item.link_url ?? "",
+      open_in_new_tab: item.open_in_new_tab ?? false,
+      _id: generateId("banner"),
+    })),
     videos: doc.videos.map((item) => ({ ...item, _id: generateId("video") })),
     quick_keywords: [...doc.quick_keywords],
     featured: HOMEPAGE_FEATURED_KEYS.map((key) => ({ ...doc.featured[key], key })),
@@ -49,7 +50,7 @@ function omit<T extends object, K extends keyof T>(item: T, ...keys: K[]): Omit<
 
 export function fromEditableHomepage(draft: EditableHomepage): HomepageDoc {
   return {
-    banners: draft.banners.map((item) => omit(item, "_id", "linkUrl")),
+    banners: draft.banners.map((item) => omit(item, "_id")),
     videos: draft.videos.map((item) => omit(item, "_id")),
     quick_keywords: draft.quick_keywords,
     featured: Object.fromEntries(

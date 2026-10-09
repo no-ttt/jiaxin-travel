@@ -1,4 +1,5 @@
 import type { PublicMedia } from "@/lib/api/types/cms";
+import { videoSrc } from "@/lib/api/types/media";
 import type { Album, PublicJourney, PublicJourneyList } from "@/lib/api/types/journey";
 
 export type JourneyLayout = "hero" | "tall" | "small" | "wide";
@@ -32,7 +33,7 @@ const LAYOUT_CYCLE: JourneyLayout[] = ["hero", "tall", "small", "wide", "wide", 
 export function toVisual(media: PublicMedia | null | undefined, variant: "card" | "hero"): JourneyVisual | null {
   if (!media) return null;
   if (media.kind === "video") {
-    return { isVideo: true, imageUrl: media.variants.thumb ?? null, videoUrl: media.url };
+    return { isVideo: true, imageUrl: media.variants.thumb ?? null, videoUrl: videoSrc(media) };
   }
   return { isVideo: false, imageUrl: media.variants[variant] ?? media.url, videoUrl: null };
 }

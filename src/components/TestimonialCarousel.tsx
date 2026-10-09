@@ -79,7 +79,7 @@ export default function TestimonialCarousel({ testimonials }: { testimonials: Te
   }, [testimonials.length]);
 
   return (
-    <section className="flex flex-col gap-8 bg-white py-12 pl-4 sm:pl-8 lg:py-24 lg:pl-[120px]">
+    <section className="flex flex-col gap-8 bg-white py-12 pl-4 sm:pl-8 lg:py-24 lg:pl-[120px] xl:pl-[max(120px,calc((100%_-_1200px)/2))]">
       <div className="flex flex-col gap-2">
         <span className="text-[13px] font-bold uppercase tracking-[0.1692em] text-[#0053E0]">
           Client Testimonials

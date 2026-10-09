@@ -1,5 +1,4 @@
 export type FlightLeg = {
-  direction: "去程" | "回程";
   date: string;
   airline: string;
   flightNumber: string;
@@ -43,7 +42,7 @@ export type DayPlan = {
   meals: { breakfast: string; lunch: string; dinner: string };
   hotelOptions: string[];
   description: string;
-  image: string;
+  images: string[];
 };
 
 export type NoticeTab = {

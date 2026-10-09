@@ -28,7 +28,7 @@ export default function PopularSearch({ keywords }: { keywords: string[] }) {
                 {row.map((label, j) => (
                   <Link
                     key={`${label}-${i}-${j}`}
-                    href={buildSearchHref({ keyword: label })}
+                    href={buildSearchHref({ destination: label })}
                     className="cursor-pointer whitespace-nowrap rounded-2xl px-3 py-1 text-base uppercase text-black transition hover:bg-slate-100"
                   >
                     {label}

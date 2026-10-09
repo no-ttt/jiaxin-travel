@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 
-export type SortOption = "popular" | "price-asc" | "price-desc";
+export type SortOption = "popular" | "departure-date" | "price-desc" | "price-asc";
 
 const SORT_LABELS: Record<SortOption, string> = {
   popular: "熱門程度",
-  "price-asc": "價格由低到高",
+  "departure-date": "出發日期",
   "price-desc": "價格由高到低",
+  "price-asc": "價格由低到高",
 };
 
 export default function SearchSummary({

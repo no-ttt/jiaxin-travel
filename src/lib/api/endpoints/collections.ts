@@ -20,18 +20,17 @@ const isMedia = (value: unknown): value is Media =>
 
 /**
  * Admin collection `items` and trip-search rows (confirmed): `{ trip_id, trip_code, product_name,
- * price_from, currency }` with no cover image. Read leniently in case covers are added later.
+ * price_from, currency, cover }`; `cover` is a Media or null when the trip has no cover image.
  */
 function toCollectionTrip(raw: Raw): CollectionTrip {
-  const trip = (typeof raw.trip === "object" && raw.trip !== null ? raw.trip : raw) as Raw;
-  const cover = [trip.cover, trip.cover_media, raw.cover].find(isMedia);
+  const cover = isMedia(raw.cover) ? raw.cover : null;
   return {
-    id: str(raw.trip_id) || str(trip.id),
-    trip_code: str(trip.trip_code),
-    product_name: str(trip.product_name) || str(trip.title),
-    price_from: num(trip.price_from),
-    currency: str(trip.currency),
-    thumbnail: cover ? (cover.variants.thumb ?? cover.url) : strOrNull(trip.thumbnail_url),
+    id: str(raw.trip_id),
+    trip_code: str(raw.trip_code),
+    product_name: str(raw.product_name),
+    price_from: num(raw.price_from),
+    currency: str(raw.currency),
+    thumbnail: cover ? (cover.variants.thumb ?? cover.url) : null,
   };
 }
 

@@ -22,8 +22,9 @@ const RESULTS_PER_PAGE = 6;
 
 const SORT_TO_API: Record<SortOption, string> = {
   popular: "popular",
-  "price-asc": "price_asc",
+  "departure-date": "departure_date",
   "price-desc": "price_desc",
+  "price-asc": "price_asc",
 };
 
 const ZONE_LABELS: Record<string, string> = {
@@ -44,6 +45,10 @@ function toTripResult(trip: PublicTripCard): TripResult {
     currency: trip.currency,
     externalUrl: trip.trip_type === "external" ? trip.external_url : null,
   };
+}
+
+function Spinner() {
+  return <span className="block h-8 w-8 shrink-0 animate-spin rounded-full border-[3px] border-[#E0E3E8] border-t-[#0053E0]" />;
 }
 
 function SearchPageContent() {
@@ -87,9 +92,11 @@ function SearchPageContent() {
     limit: RESULTS_PER_PAGE,
   };
   // Region matching needs the navigation regions; wait for them when a destination is set.
-  const { data, isLoading, isError } = usePublicTripSearch(params, {
+  const { data, isFetching, isError } = usePublicTripSearch(params, {
     enabled: !(applied.destination && isNavLoading),
   });
+  // Previous results stay on screen while a new filter / page loads, so show a spinner over them.
+  const isSearching = isFetching || Boolean(applied.destination && isNavLoading);
   const results = (data?.items ?? []).map(toTripResult);
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / RESULTS_PER_PAGE));
@@ -162,13 +169,28 @@ function SearchPageContent() {
                 setPage(1);
               }}
             />
-            <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <div className="relative flex min-w-0 flex-1 flex-col gap-4" aria-busy={isSearching}>
+              {isSearching && results.length > 0 && (
+                <div
+                  className="absolute inset-0 z-10 flex justify-center rounded-2xl bg-white/60"
+                  role="status"
+                  aria-label="搜尋中"
+                >
+                  {/* Sticky so the spinner stays in view when the list is scrolled. */}
+                  <div className="sticky top-[45vh] mt-24 h-8 w-8">
+                    <Spinner />
+                  </div>
+                </div>
+              )}
               {results.length > 0 ? (
                 results.map((trip) => <TripResultCard key={trip.id} trip={trip} />)
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#C3C6D6] bg-white py-16 text-center">
-                  {isLoading ? (
-                    <p className="text-sm text-[#94969C]">搜尋中…</p>
+                  {isSearching ? (
+                    <div className="flex flex-col items-center gap-3" role="status">
+                      <Spinner />
+                      <p className="text-sm text-[#94969C]">搜尋中…</p>
+                    </div>
                   ) : isError ? (
                     <p className="text-base font-medium text-[#090909]">搜尋失敗，請稍後再試</p>
                   ) : (

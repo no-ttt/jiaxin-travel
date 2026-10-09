@@ -19,7 +19,6 @@ export const NORDIC_TRIP: TripDetail = {
   price: "159,900",
   flights: [
     {
-      direction: "去程",
       date: "2026 / 06 / 20（六）",
       airline: "阿聯酋航空",
       flightNumber: "EK367",
@@ -30,7 +29,6 @@ export const NORDIC_TRIP: TripDetail = {
       nextDay: true,
     },
     {
-      direction: "去程",
       date: "2026 / 06 / 21（日）",
       airline: "阿聯酋航空",
       flightNumber: "EK157",
@@ -40,7 +38,6 @@ export const NORDIC_TRIP: TripDetail = {
       arriveCity: "斯德哥爾摩",
     },
     {
-      direction: "去程",
       date: "2026 / 06 / 21（日）",
       airline: "芬蘭航空",
       flightNumber: "AY805",
@@ -50,7 +47,6 @@ export const NORDIC_TRIP: TripDetail = {
       arriveCity: "卑爾根",
     },
     {
-      direction: "回程",
       date: "2026 / 06 / 21（日）",
       airline: "阿聯酋航空",
       flightNumber: "EK152",
@@ -60,7 +56,6 @@ export const NORDIC_TRIP: TripDetail = {
       arriveCity: "杜拜",
     },
     {
-      direction: "回程",
       date: "2026 / 06 / 21（日）",
       airline: "阿聯酋航空",
       flightNumber: "EK366",
@@ -144,7 +139,7 @@ export const NORDIC_TRIP: TripDetail = {
       hotelOptions: ["Quality Hotel Globe", "Quality Hotel Strawberry Arena", "Silja Line面海外艙", "同級旅館"],
       description:
         "被譽為世界最美的都市。此地建於波羅的海和梅拉倫湖之間的島上，市區由二萬多個大大小小的島嶼組成，這種特殊的水上景致，為它贏得北歐威尼斯的美譽。斯德哥爾摩建於十三世紀，後來幾經戰火摧毀，十九世紀後期開始重新整頓，以不破壞自然景觀為原則，此地又以諾貝爾頒獎典禮舉辦地而聞名，加上許多國際性的會議在此舉行，使其成為一座國際性的大都市。",
-      image: "/images/test/trip-detail/day1-stockholm-56586a2.png",
+      images: ["/images/test/trip-detail/day1-stockholm-56586a2.png"],
     },
     {
       date: "05/30",
@@ -159,7 +154,7 @@ export const NORDIC_TRIP: TripDetail = {
       hotelOptions: ["Scandic Bergen City", "Clarion Hotel Bergen", "同級旅館"],
       description:
         "卑爾根是挪威第二大城市，也是通往峽灣地區的門戶。城市周圍環繞著七座山丘，木造彩色房屋沿著港口排列，散發濃厚的漢薩同盟時期風情，是探索挪威峽灣風光的最佳起點。",
-      image: "/images/test/trip-detail/transport-2.png",
+      images: ["/images/test/trip-detail/transport-2.png"],
     },
   ],
   tipNotice:

@@ -8,7 +8,7 @@ import type {
   VisaServiceDetail,
   VisaServices,
 } from "@/lib/api/types/cms";
-import { isBlankHtml, noticeDocsOf } from "@/components/visa/detail";
+import { isBlankHtml } from "@/lib/html";
 import { generateId } from "../ui/generateId";
 
 /** Admin-side editable shapes: API rows plus a client-only `_id` for React keys. */
@@ -18,10 +18,9 @@ export type EditableRequiredDoc = Omit<VisaRequiredDoc, "downloads"> & {
   downloads: EditableDownload[];
 };
 export type EditableNoticeDoc = VisaNoticeDoc & { _id: string };
-export type EditableDownloadDoc = Required<VisaDownloadDoc> & { _id: string };
-export type EditableDetail = Omit<VisaServiceDetail, "required_docs" | "notice_title" | "notice_docs" | "downloads"> & {
+export type EditableDownloadDoc = VisaDownloadDoc & { _id: string };
+export type EditableDetail = Omit<VisaServiceDetail, "required_docs" | "notice_docs" | "downloads"> & {
   required_docs: EditableRequiredDoc[];
-  notice_title: string;
   notice_docs: EditableNoticeDoc[];
   downloads: EditableDownloadDoc[];
 };
@@ -75,7 +74,7 @@ const isBlankDownload = (file: VisaDownload) => !file.label.trim() && !file.url.
 const isBlankDoc = (doc: VisaRequiredDoc) =>
   !doc.title.trim() && isBlankHtml(doc.body_html) && doc.downloads.length === 0;
 const isBlankNoticeDoc = (doc: VisaNoticeDoc) => !doc.title.trim() && isBlankHtml(doc.body_html);
-const isBlankDownloadDoc = (file: Required<VisaDownloadDoc>) =>
+const isBlankDownloadDoc = (file: VisaDownloadDoc) =>
   isBlankDownload(file) && !file.title.trim() && !file.description.trim();
 
 const toEditableDownload = (file: VisaDownload): EditableDownload => ({ ...file, _id: generateId("download") });
@@ -91,14 +90,11 @@ function toEditableDetail(detail: VisaServiceDetail): EditableDetail {
         toEditableDownload
       ),
     })),
-    notice_title: detail.notice_title ?? DEFAULT_NOTICE_TITLE,
-    notice_docs: padTo(noticeDocsOf(detail), NOTICE_DOC_SLOTS, () => ({ title: "", body_html: "" })).map(
+    notice_docs: padTo(detail.notice_docs, NOTICE_DOC_SLOTS, () => ({ title: "", body_html: "" })).map(
       (doc) => ({ ...doc, _id: generateId("notice") })
     ),
-    downloads: padTo<VisaDownloadDoc>(detail.downloads, DOWNLOAD_SLOTS, blankDownload).map((file) => ({
+    downloads: padTo(detail.downloads, DOWNLOAD_SLOTS, blankDownloadDoc).map((file) => ({
       ...file,
-      title: file.title ?? "",
-      description: file.description ?? "",
       _id: generateId("download"),
     })),
   };
@@ -173,12 +169,18 @@ function blankDownload(): VisaDownload {
   return { label: "", url: "", media_id: null };
 }
 
+function blankDownloadDoc(): VisaDownloadDoc {
+  return { ...blankDownload(), title: "", description: "" };
+}
+
 function createDetail(): EditableDetail {
   return toEditableDetail({
     required_docs_visible: true,
     required_docs_title: "需準備文件清單",
     required_docs: [],
     notice_visible: true,
+    notice_title: DEFAULT_NOTICE_TITLE,
+    notice_docs: [],
     notice_html: "",
     downloads_visible: true,
     downloads: [],

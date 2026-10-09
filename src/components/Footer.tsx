@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useFooter } from "@/lib/api/hooks/useCms";
+import { useFooter, usePurchaseFlow } from "@/lib/api/hooks/useCms";
 
 /** Design order: LINE, Facebook, Instagram (footer-social-1/2/3 are drawn in that order). */
 const SOCIAL_LINK_DEFS = [
@@ -46,9 +46,15 @@ const PALETTES = {
 export default function Footer({ variant = "light" }: { variant?: keyof typeof PALETTES }) {
   const c = PALETTES[variant];
   const { data: footer } = useFooter();
+  const { data: purchaseFlow } = usePurchaseFlow();
 
   // Prefetched in the root layout, so this only happens when the API was down: show the bare frame.
   if (!footer) return <footer className={`border-t ${c.footer}`} />;
+
+  // 訂購流程's 匯款資訊 switched off in the admin: its link would point at nothing.
+  const links = footer.links.filter(
+    (link) => purchaseFlow?.payment.visible !== false || !link.url.endsWith("#payment-info")
+  );
 
   // Shown at up to 210px wide; the 800px card variant stays sharp on 2x screens (thumb is 400px).
   const logoUrl = footer.logo ? (footer.logo.variants.card ?? footer.logo.url) : null;
@@ -132,7 +138,7 @@ export default function Footer({ variant = "light" }: { variant?: keyof typeof P
       <div className="flex w-full max-w-[1200px] flex-col items-center gap-4 py-4 sm:flex-row sm:justify-between">
         <span className={`text-sm ${c.copyright}`}>{footer.copyright}</span>
         <div className="flex items-center gap-5">
-          {footer.links.map((link, i) => (
+          {links.map((link, i) => (
             <span key={i} className="flex items-center gap-5">
               {i > 0 && <span className={`h-3.5 w-px ${c.linkDivider}`} />}
               <Link href={link.url} className={`cursor-pointer text-sm font-medium ${c.link}`}>

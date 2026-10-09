@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useFooter } from "@/lib/api/hooks/useCms";
 import type { VisaDownload, VisaServiceDetail } from "@/lib/api/types/cms";
-import { isBlankHtml, noticeDocsOf } from "./detail";
+import { isBlankHtml } from "@/lib/html";
 import type { ServiceRow } from "./ServiceTable";
 
 type DrawerTab = "documents" | "notes" | "downloads";
@@ -166,7 +166,7 @@ export default function ServiceDetailDrawer({
                     {row.detail.notice_title || TAB_LABELS.notes}
                   </h3>
                   <div className="flex flex-col">
-                    {noticeDocsOf(row.detail).map((doc, i) => (
+                    {row.detail.notice_docs.map((doc, i) => (
                       <div
                         key={i}
                         className="flex flex-col gap-[5px] border-b border-[#E0E3E8] pb-5 pt-2"

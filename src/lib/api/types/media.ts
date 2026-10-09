@@ -44,9 +44,13 @@ export type Media = {
   url: string;
   width: number | null;
   height: number | null;
-  variants: Partial<Record<"card" | "hero" | "thumb", string>>;
+  /** Images: card / hero / thumb. Videos other than MP4 (e.g. MOV): `web`, an MP4 transcode. */
+  variants: Partial<Record<"card" | "hero" | "thumb" | "web", string>>;
   transcode_status: string;
 };
+
+/** Playable source for a video: the MP4 transcode when the upload wasn't MP4 (browsers can't all play MOV). */
+export const videoSrc = (media: Media): string => media.variants.web ?? media.url;
 
 export type CompleteResponse = {
   items: Media[];

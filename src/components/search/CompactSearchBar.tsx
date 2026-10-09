@@ -27,10 +27,14 @@ function TextField({
 function DateField({
   label,
   value,
+  min,
+  max,
   onChange,
 }: {
   label: string;
   value: string;
+  min?: string;
+  max?: string;
   onChange: (value: string) => void;
 }) {
   return (
@@ -41,6 +45,8 @@ function DateField({
         <input
           type="date"
           value={value}
+          min={min}
+          max={max}
           onChange={(e) => onChange(e.target.value)}
           className="min-w-0 flex-1 bg-transparent text-sm text-[#090909] outline-none [color-scheme:light]"
         />
@@ -80,12 +86,27 @@ export default function CompactSearchBar({
       <DateField
         label="出發日期"
         value={query.startDate}
-        onChange={(startDate) => onChange({ ...query, startDate })}
+        max={query.endDate || undefined}
+        onChange={(startDate) =>
+          // A start after the chosen end invalidates the end.
+          onChange({
+            ...query,
+            startDate,
+            endDate: startDate && query.endDate && startDate > query.endDate ? "" : query.endDate,
+          })
+        }
       />
       <DateField
         label="結束日期"
         value={query.endDate}
-        onChange={(endDate) => onChange({ ...query, endDate })}
+        min={query.startDate || undefined}
+        onChange={(endDate) =>
+          onChange({
+            ...query,
+            endDate,
+            startDate: endDate && query.startDate && endDate < query.startDate ? "" : query.startDate,
+          })
+        }
       />
       <button
         type="button"

@@ -1,19 +1,19 @@
 import Image from "next/image";
 import type { FlightLeg } from "./types";
 
-function FlightRow({ flight, isFirstOfDirection }: { flight: FlightLeg; isFirstOfDirection: boolean }) {
+function FlightRow({ flight, direction }: { flight: FlightLeg; direction: "去程" | "回程" | null }) {
   return (
     <tr className="border-t border-[#E0E3E8] first:border-t-0">
       <td className="h-12 w-[100px] px-2 text-center align-middle">
-        {isFirstOfDirection && (
+        {direction && (
           <span className="inline-flex items-center gap-1">
             <Image src="/images/trip-detail/plane-icon.svg" alt="" width={16} height={16} />
             <span
               className={`flex h-7 w-12 items-center justify-center rounded-[14px] text-[13px] font-medium ${
-                flight.direction === "去程" ? "bg-[#ECF1FA] text-[#002366]" : "bg-[#F6F6F6] text-[#535F71]"
+                direction === "去程" ? "bg-[#ECF1FA] text-[#002366]" : "bg-[#F6F6F6] text-[#535F71]"
               }`}
             >
-              {flight.direction}
+              {direction}
             </span>
           </span>
         )}
@@ -85,7 +85,8 @@ export default function FlightInfo({ flights, note }: { flights: FlightLeg[]; no
               <FlightRow
                 key={`${flight.flightNumber}-${i}`}
                 flight={flight}
-                isFirstOfDirection={i === 0 || flights[i - 1].direction !== flight.direction}
+                // Fixed by position: the first leg is 去程, the last is 回程, middle legs are unlabeled.
+                direction={i === 0 ? "去程" : i === flights.length - 1 ? "回程" : null}
               />
             ))}
           </tbody>

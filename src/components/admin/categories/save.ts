@@ -5,11 +5,14 @@ import type { CategoriesDraft, CategoryDraft } from "./data";
 /**
  * One API request produced by diffing the draft against the last server copy. After a save the
  * page reloads and shows the server copy, so nothing is reapplied. A region removal carries its id
- * and label: the API may refuse it (still tagged on trips), shown in the "無法刪除" dialog.
+ * and label: the API may refuse it (still tagged on trips), shown in the "無法刪除" dialog. A region
+ * create/rename carries `named`: the API refuses a name another region already has (409), shown
+ * in the "名稱已存在" dialog.
  */
 export type SaveOp = {
   run: () => Promise<unknown>;
   removed?: { id: number; label: string };
+  named?: { label: string };
 };
 
 const nullIfBlank = (value: string) => value.trim() || null;
@@ -40,13 +43,19 @@ export function buildSaveOps(base: CategoriesDraft, draft: CategoriesDraft): Sav
   for (const region of draft.regions) {
     const name = region.name.trim();
     if (region.id == null) {
-      ops.push({ run: () => taxonomyApi.createRegion({ name, position: region.position }) });
+      ops.push({
+        run: () => taxonomyApi.createRegion({ name, position: region.position }),
+        named: { label: `地區「${name}」` },
+      });
       continue;
     }
     const id = region.id;
     const original = base.regions.find((r) => r.id === id);
     if (original && changed(region.name, original.name)) {
-      ops.push({ run: () => taxonomyApi.updateRegion(id, { name, position: region.position }) });
+      ops.push({
+        run: () => taxonomyApi.updateRegion(id, { name, position: region.position }),
+        named: { label: `地區「${original.name}」改名為「${name}」` },
+      });
     }
   }
   for (const original of base.regions) {

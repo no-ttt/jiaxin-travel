@@ -4,6 +4,7 @@ import AdminSectionCard from "../ui/AdminSectionCard";
 import AdminItemCard from "../ui/AdminItemCard";
 import AdminTextInput from "../ui/AdminTextInput";
 import AdminTextarea from "../ui/AdminTextarea";
+import AdminImageDropzone from "../ui/AdminImageDropzone";
 import AdminAddButton from "../ui/AdminAddButton";
 import { generateId } from "../ui/generateId";
 import AdminSelect from "../trips/AdminSelect";
@@ -42,11 +43,12 @@ export default function TestimonialSection({
     ]);
   };
 
-  const duplicateTestimonial = (index: number) => {
+  const moveTestimonialUp = (index: number) => {
+    if (index === 0) return;
     setTestimonials((prev) => {
-      const target = prev[index];
-      const copy: TestimonialItem = { ...target, _id: generateId("testimonial") };
-      return [...prev.slice(0, index + 1), copy, ...prev.slice(index + 1)];
+      const next = [...prev];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
     });
   };
 
@@ -64,7 +66,7 @@ export default function TestimonialSection({
           key={item._id}
           badge={`評價 ${index + 1}`}
           actions={[
-            { label: "複製", onClick: () => duplicateTestimonial(index) },
+            { label: "上移", onClick: () => moveTestimonialUp(index), disabled: index === 0 },
             { label: "刪除", onClick: () => removeTestimonial(item._id) },
           ]}
         >
@@ -97,12 +99,29 @@ export default function TestimonialSection({
               />
             </div>
           </div>
-          <AdminTextarea
-            label="評價內容"
-            value={item.content}
-            rows={2}
-            onChange={(value) => updateTestimonial(item._id, { content: value })}
-          />
+          <div className="flex items-stretch gap-4">
+            <div className="flex flex-1 flex-col [&_textarea]:flex-1 [&>div]:flex-1">
+              <AdminTextarea
+                label="評價內容"
+                value={item.content}
+                rows={2}
+                onChange={(value) => updateTestimonial(item._id, { content: value })}
+              />
+            </div>
+            <div className="flex w-[200px] shrink-0 flex-col gap-3">
+              <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">行程縮圖</span>
+              <AdminImageDropzone
+                label="上傳圖示"
+                hint="SVG / PNG"
+                size="sm"
+                hintPosition="beside"
+                purpose="icon"
+                accept="image/svg+xml,image/png"
+                mediaId={item.photo_media_id}
+                onChange={(photo_media_id) => updateTestimonial(item._id, { photo_media_id })}
+              />
+            </div>
+          </div>
         </AdminItemCard>
       ))}
       <AdminAddButton

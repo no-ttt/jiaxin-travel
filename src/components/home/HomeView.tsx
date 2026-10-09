@@ -13,6 +13,7 @@ import Footer from "@/components/Footer";
 import { useHomepage } from "@/lib/api/hooks/useCms";
 import { buildSearchHref } from "@/components/search/searchUrl";
 import type { Homepage, HomepageTripCard, PublicMedia } from "@/lib/api/types/cms";
+import { videoSrc } from "@/lib/api/types/media";
 
 function mediaUrl(media: PublicMedia | null, variant?: "hero" | "card" | "thumb"): string | null {
   if (!media) return null;
@@ -49,6 +50,7 @@ export default function HomeView({ initialHomepage }: { initialHomepage: Homepag
       image: mediaUrl(banner.image, "hero"),
       title: banner.title,
       subtitle: banner.subtitle,
+      linkUrl: banner.link_url?.trim() || null,
     })) ?? [];
 
   const videos: VideoItem[] =
@@ -59,7 +61,7 @@ export default function HomeView({ initialHomepage }: { initialHomepage: Homepag
       source:
         video.source_type === "upload"
           ? video.video
-            ? { type: "file", src: video.video.url }
+            ? { type: "file", src: videoSrc(video.video) }
             : null
           : resolveVideoUrl(video.video_url),
     })) ?? [];

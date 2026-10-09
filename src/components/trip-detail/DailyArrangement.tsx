@@ -21,6 +21,44 @@ function MealRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** A day's photos: one at a time, with arrows and a "1 / 3" count once there is more than one. */
+function DayPhotos({ images }: { images: string[] }) {
+  const [index, setIndex] = useState(0);
+  const hasMany = images.length > 1;
+  const goTo = (next: number) => setIndex((next + images.length) % images.length);
+
+  return (
+    <div className="relative h-[187px] w-full shrink-0 overflow-hidden rounded-[10px] sm:w-[280px]">
+      <Image src={images[index]} alt="" fill className="object-cover" />
+      {hasMany && (
+        <>
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-[60px] bg-gradient-to-r from-black/10 to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-[60px] bg-gradient-to-l from-black/10 to-transparent" />
+          <button
+            type="button"
+            aria-label="上一張"
+            onClick={() => goTo(index - 1)}
+            className="absolute left-0 top-1/2 flex h-12 w-10 -translate-y-1/2 cursor-pointer items-center pl-2.5"
+          >
+            <Image src="/images/trip-detail/day-photo-prev.svg" alt="" width={14} height={25} />
+          </button>
+          <button
+            type="button"
+            aria-label="下一張"
+            onClick={() => goTo(index + 1)}
+            className="absolute right-0 top-1/2 flex h-12 w-10 -translate-y-1/2 cursor-pointer items-center justify-end pr-2.5"
+          >
+            <Image src="/images/trip-detail/day-photo-next.svg" alt="" width={14} height={25} />
+          </button>
+          <span className="absolute right-2.5 top-2.5 rounded-xl bg-black/55 px-2.5 py-1 font-['TASA_Orbiter'] text-[11px] font-semibold text-white">
+            {index + 1} / {images.length}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DayCard({ day }: { day: DayPlan }) {
   return (
     <div id={`day-${day.day}`} className="flex scroll-mt-28 flex-col items-stretch">
@@ -76,11 +114,7 @@ function DayCard({ day }: { day: DayPlan }) {
 
         <div className="flex flex-col-reverse gap-5 pl-0 sm:flex-row sm:pl-8">
           <p className="flex-1 text-base leading-relaxed text-[#4A5058]">{day.description}</p>
-          {day.image && (
-            <div className="relative h-[187px] w-full shrink-0 overflow-hidden rounded-[10px] sm:w-[280px]">
-              <Image src={day.image} alt="" fill className="object-cover" />
-            </div>
-          )}
+          {day.images.length > 0 && <DayPhotos images={day.images} />}
         </div>
       </div>
     </div>

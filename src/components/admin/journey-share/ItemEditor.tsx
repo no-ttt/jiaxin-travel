@@ -4,9 +4,8 @@ import { useState, type DragEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminSpinner from "../ui/AdminSpinner";
 import AdminTextInput from "../ui/AdminTextInput";
-import { useMediaUpload } from "../ui/useMediaUpload";
-import PhotoCard from "./PhotoCard";
-import { createJourneyMedia, type CardPatch, type JourneyCard } from "./data";
+import PhotoCard, { MediaThumb } from "./PhotoCard";
+import { createJourneyMedia, type CardPatch, type JourneyCard, type JourneyMedia } from "./data";
 import { mediaKey, useMedia } from "@/lib/api/hooks/useMedia";
 import { uploadMedia } from "@/lib/api/upload";
 
@@ -38,78 +37,27 @@ function useAlbumUpload(onUploaded: (mediaId: string) => void) {
   return { upload, isUploading: pending > 0, error };
 }
 
-/** Cover picker styled as the design's text field: clicking (or dropping a file) uploads a new cover. */
-function CoverField({ mediaId, onUploaded }: { mediaId: string | null; onUploaded: (mediaId: string) => void }) {
-  const { inputProps, dropProps, openPicker, isUploading, error } = useMediaUpload("auto", onUploaded);
-  const { data: media } = useMedia(mediaId);
-  const text = isUploading
-    ? "上傳中…"
-    : mediaId
-      ? `已上傳${media?.kind === "video" ? "影片" : "圖片"}，點擊更換`
-      : "點擊更換圖片或影片檔案…";
+/** The current cover, picked from the album below ("照片素材・素材 01"). */
+function CoverSummary({ mediaId, media }: { mediaId: string | null; media: JourneyMedia[] }) {
+  const { data: file } = useMedia(mediaId);
+  const index = media.findIndex((item) => item.mediaId === mediaId);
+  const kindLabel = file ? (file.kind === "video" ? "影片素材" : "照片素材") : "";
+  const label = index === -1 ? kindLabel : `${kindLabel}・素材 ${String(index + 1).padStart(2, "0")}`;
 
   return (
     <div className="flex flex-col gap-[7px]">
       <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">
-        封面圖片／影片（點擊卡片右上角圖示表示為影片素材）
+        封面圖片／影片（於下方素材縮圖選擇，目前封面如下所示）
       </span>
-      <button
-        type="button"
-        onClick={openPicker}
-        disabled={isUploading}
-        {...dropProps}
-        className="flex h-11 w-full cursor-pointer items-center rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-left text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none transition hover:border-[#0053E0] focus:border-[#0053E0] disabled:cursor-wait"
-      >
-        {text}
-      </button>
-      <input {...inputProps} accept={MEDIA_ACCEPT} />
-      {error && <span className="text-xs leading-[1.45em] text-red-600">{error}</span>}
-      {mediaId && !isUploading && <CoverPreview mediaId={mediaId} />}
-    </div>
-  );
-}
-
-/** Thumbnail of the uploaded cover; a video without a generated thumbnail shows its first frame. */
-function CoverPreview({ mediaId }: { mediaId: string }) {
-  const { data: media, isError } = useMedia(mediaId);
-  const isVideo = media?.kind === "video";
-  const thumbUrl = media ? (media.variants.thumb ?? (isVideo ? null : media.url)) : null;
-  const videoUrl = isVideo && !thumbUrl ? media.url : null;
-  const previewUrl = thumbUrl ?? videoUrl;
-  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
-  const isLoaded = previewUrl !== null && loadedUrl === previewUrl;
-  const previewClass = `absolute inset-0 h-full w-full object-cover transition-opacity ${isLoaded ? "opacity-100" : "opacity-0"}`;
-
-  return (
-    <div className="relative h-[116px] w-[208px] overflow-hidden rounded-lg bg-[#ECF1FA]">
-      {thumbUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={thumbUrl}
-          alt=""
-          onLoad={() => setLoadedUrl(thumbUrl)}
-          onError={() => setLoadedUrl(thumbUrl)}
-          className={previewClass}
-        />
-      )}
-      {videoUrl && (
-        <video
-          src={videoUrl}
-          muted
-          playsInline
-          preload="metadata"
-          onLoadedData={() => setLoadedUrl(videoUrl)}
-          onError={() => setLoadedUrl(videoUrl)}
-          className={previewClass}
-        />
-      )}
-      {!isLoaded && !isError && <AdminSpinner label="圖片載入中" />}
-      {isVideo && (
-        <span className="absolute bottom-2 left-2 flex items-center gap-[3px] rounded-lg bg-[#002366]/85 px-1.5 py-[3px] text-white">
-          <span className="text-[8px] leading-none">▶</span>
-          <span className="text-[10px] font-medium leading-none">影片</span>
-        </span>
-      )}
+      <div className="flex items-center gap-3">
+        <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[10px] bg-[#ECF1FA]">
+          {mediaId && <MediaThumb key={mediaId} mediaId={mediaId} className="" />}
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-bold text-[#535F71]">目前封面</span>
+          {mediaId && <span className="text-xs text-[#0A0A0C]">{label}</span>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -123,8 +71,12 @@ export default function ItemEditor({
   onChange: (patch: CardPatch) => void;
   onDelete?: () => void;
 }) {
+  // The first upload into a journey without a cover becomes its cover.
   const { upload, isUploading, error } = useAlbumUpload((mediaId) =>
-    onChange((card) => ({ media: [...card.media, createJourneyMedia(mediaId)] }))
+    onChange((card) => ({
+      media: [...card.media, createJourneyMedia(mediaId)],
+      coverMediaId: card.coverMediaId ?? mediaId,
+    }))
   );
 
   const updateMedia = (key: string, patch: Partial<JourneyCard["media"][number]>) => {
@@ -133,8 +85,15 @@ export default function ItemEditor({
     }));
   };
 
+  // Removing the album's last copy of the cover leaves the journey without one.
   const removeMedia = (key: string) => {
-    onChange((card) => ({ media: card.media.filter((media) => media.key !== key) }));
+    onChange((card) => {
+      const removed = card.media.find((item) => item.key === key);
+      const media = card.media.filter((item) => item.key !== key);
+      const coverGone =
+        removed?.mediaId === card.coverMediaId && !media.some((item) => item.mediaId === card.coverMediaId);
+      return { media, coverMediaId: coverGone ? null : card.coverMediaId };
+    });
   };
 
   return (
@@ -162,7 +121,7 @@ export default function ItemEditor({
 
       <AdminTextInput label="旅程名稱" value={item.name} onChange={(name) => onChange({ name })} />
 
-      <CoverField mediaId={item.coverMediaId} onUploaded={(coverMediaId) => onChange({ coverMediaId })} />
+      <CoverSummary mediaId={item.coverMediaId} media={item.media} />
 
       <AdminTextInput
         label="精選好評（滑鼠移入卡片時顯示）"
@@ -237,6 +196,8 @@ export default function ItemEditor({
               key={media.key}
               media={media}
               index={index}
+              isCover={media.mediaId === item.coverMediaId}
+              onSetCover={() => onChange({ coverMediaId: media.mediaId })}
               onChange={(patch) => updateMedia(media.key, patch)}
               onRemove={() => removeMedia(media.key)}
             />

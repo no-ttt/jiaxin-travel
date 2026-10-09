@@ -41,8 +41,8 @@ export default function AdminCategoriesPage() {
     null
   );
   const [isSaving, setIsSaving] = useState(false);
-  // API messages for removals it refused (e.g. a region still tagged on trips).
-  const [refusedRemovals, setRefusedRemovals] = useState<string | null>(null);
+  // API messages for changes it refused: removals (a region still tagged on trips) and duplicate names.
+  const [refusedDialog, setRefusedDialog] = useState<{ title: string; message: string } | null>(null);
   // The save went out but reloading failed, so the page can't tell what was saved; block another save.
   const [reloadFailed, setReloadFailed] = useState(false);
 
@@ -103,13 +103,22 @@ export default function AdminCategoriesPage() {
     // A removal that errored but whose region is gone after the reload did go through (only the
     // response was lost), so it counts as saved. The rest were refused: dialog with the API's message.
     const regionStillThere = (id: number) => reloadedRegionIds === null || reloadedRegionIds.includes(id);
-    const refused = failures.filter((f) => f.op.removed && regionStillThere(f.op.removed.id));
-    const retryable = failures.filter((f) => !f.op.removed);
+    const refusedRemovals = failures.filter((f) => f.op.removed && regionStillThere(f.op.removed.id));
+    const isDuplicateName = (f: (typeof failures)[number]) =>
+      Boolean(f.op.named) && f.error instanceof ApiError && f.error.status === 409;
+    const duplicateNames = failures.filter(isDuplicateName);
+    const refused = [...refusedRemovals, ...duplicateNames];
+    const retryable = failures.filter((f) => !f.op.removed && !isDuplicateName(f));
     const unsaved = refused.length + retryable.length;
     if (refused.length > 0) {
-      const lines = refused.map((f) => `${f.op.removed!.label}：${errorMessage(f.error)}`).join("\n");
+      const lines = [
+        ...refusedRemovals.map((f) => `${f.op.removed!.label}：${errorMessage(f.error)}`),
+        ...duplicateNames.map((f) => `${f.op.named!.label}：${errorMessage(f.error)}`),
+      ].join("\n");
       const outcome = reloaded ? "" : "重新載入資料失敗，請重新整理頁面確認目前狀態。";
-      setRefusedRemovals(`${lines}\n\n${outcome}`);
+      const title =
+        duplicateNames.length === 0 ? "無法刪除" : refusedRemovals.length === 0 ? "名稱已存在" : "部分變更無法儲存";
+      setRefusedDialog({ title, message: `${lines}\n\n${outcome}` });
     }
     if (retryable.length > 0) {
       setToast({
@@ -158,13 +167,13 @@ export default function AdminCategoriesPage() {
         </>
       )}
 
-      {refusedRemovals && (
+      {refusedDialog && (
         <AdminConfirmDialog
-          title="無法刪除"
-          message={refusedRemovals}
+          title={refusedDialog.title}
+          message={refusedDialog.message}
           confirmLabel="知道了"
           cancelLabel={null}
-          onConfirm={() => setRefusedRemovals(null)}
+          onConfirm={() => setRefusedDialog(null)}
         />
       )}
 

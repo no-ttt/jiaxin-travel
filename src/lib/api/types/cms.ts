@@ -21,6 +21,9 @@ export type HomepageDocBanner = {
   title: string;
   subtitle: string;
   media_id: string | null;
+  link_url: string;
+  /** No field in the admin UI; round-tripped unchanged. */
+  open_in_new_tab: boolean;
 };
 
 export type HomepageDocVideo = {
@@ -54,7 +57,7 @@ export type HomepageDocTestimonial = {
   trip_info: string;
   rating: number;
   content: string;
-  /** No field in the admin UI yet; round-tripped unchanged. */
+  /** 行程縮圖 */
   photo_media_id: string | null;
 };
 
@@ -80,6 +83,9 @@ export type HomepageBanner = {
   title: string;
   subtitle: string;
   image: PublicMedia | null;
+  /** Empty string when the banner has no link. */
+  link_url: string;
+  open_in_new_tab: boolean;
 };
 
 export type HomepageVideo = {
@@ -214,19 +220,15 @@ export type VisaRequiredDoc = {
   downloads: VisaDownload[];
 };
 
-/**
- * 辦證須知 / 文件下載 rows as the design needs them. `notice_title`, `notice_docs` and the
- * download `title` / `description` are requested from the backend and not stored yet (it drops
- * unknown fields), hence optional; until then 辦證須知 falls back to `notice_html`.
- */
+/** 辦證須知 / 文件下載 rows. */
 export type VisaNoticeDoc = {
   title: string;
   body_html: string;
 };
 
 export type VisaDownloadDoc = VisaDownload & {
-  title?: string;
-  description?: string;
+  title: string;
+  description: string;
 };
 
 /** 「查看詳情」drawer: 需備資料 / 辦證須知 / 文件下載 tabs. */
@@ -235,9 +237,10 @@ export type VisaServiceDetail = {
   required_docs_title: string;
   required_docs: VisaRequiredDoc[];
   notice_visible: boolean;
-  notice_title?: string;
-  notice_docs?: VisaNoticeDoc[];
-  /** Legacy single-block 辦證須知; read-only fallback, round-tripped unchanged. */
+  notice_title: string;
+  notice_docs: VisaNoticeDoc[];
+  /** Legacy single-block 辦證須知, kept by the backend for old data (it already returns it as
+   * `notice_docs`); not shown, round-tripped unchanged. */
   notice_html: string;
   downloads_visible: boolean;
   downloads: VisaDownloadDoc[];
@@ -310,8 +313,8 @@ export type PurchaseFlowPayment = {
   bank_code: string;
   account_number: string;
   note_html: string;
-  /** 「匯款資訊」顯示開關 — requested from the backend, not stored yet (it drops unknown fields). */
-  visible?: boolean;
+  /** 「匯款資訊」顯示開關; the backend defaults it to true. */
+  visible: boolean;
 };
 
 export type PurchaseFlowPage = {

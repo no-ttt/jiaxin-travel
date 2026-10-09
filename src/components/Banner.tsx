@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { buildSearchHref, type SearchUrlState } from "@/components/search/searchUrl";
 import { useNavigation } from "@/lib/api/hooks/useCms";
@@ -13,6 +14,7 @@ export type BannerSlide = {
   image: string | null;
   title: string;
   subtitle: string;
+  linkUrl: string | null;
 };
 
 const AUTOPLAY_INTERVAL = 6000;
@@ -56,7 +58,8 @@ const SERVICE_CONTENT: Record<
     title: "即時查詢全球航班與優惠票價",
     description: "即將前往合作機票預訂系統，可查詢即時航班與票價資訊。",
     cta: "立即查詢全球機票 ↗",
-    href: "/contact",
+    // Partner flight booking (Trip.com), link provided by Justin on 2026-10-07.
+    href: "https://www.trip.com/t/8uGP2jIMeW2",
   },
   visa: {
     icon: "/images/service-visa-icon.png",
@@ -149,6 +152,16 @@ export default function Banner({ slides }: { slides: BannerSlide[] }) {
                 </p>
               </div>
             </div>
+            {slide.linkUrl && (
+              <Link
+                href={slide.linkUrl}
+                aria-label={slide.title || `Banner ${index + 1}`}
+                tabIndex={index === activeIndex ? undefined : -1}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute inset-0"
+              />
+            )}
           </div>
         ))}
 
@@ -288,8 +301,29 @@ function SearchPanel({
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <SearchField label="出發日期" placeholder="" type="date" value={dateFrom} onChange={setDateFrom} />
-          <SearchField label="結束日期" placeholder="" type="date" value={dateTo} onChange={setDateTo} />
+          <SearchField
+            label="出發日期"
+            placeholder=""
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(value) => {
+              setDateFrom(value);
+              // A start after the chosen end invalidates the end.
+              if (value && dateTo && value > dateTo) setDateTo("");
+            }}
+          />
+          <SearchField
+            label="結束日期"
+            placeholder=""
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(value) => {
+              setDateTo(value);
+              if (value && dateFrom && value < dateFrom) setDateFrom("");
+            }}
+          />
         </div>
       </div>
 
@@ -319,6 +353,9 @@ function ServicePanel({
   href: string;
 }) {
   const router = useRouter();
+  // External services (e.g. the flight booking partner) open in a new tab.
+  const handleClick = () =>
+    /^https?:\/\//.test(href) ? window.open(href, "_blank", "noopener,noreferrer") : router.push(href);
 
   return (
     <div className="flex flex-col items-center justify-center gap-6 rounded-b-3xl px-6 py-8 sm:px-12">
@@ -338,7 +375,7 @@ function ServicePanel({
 
       <button
         type="button"
-        onClick={() => router.push(href)}
+        onClick={handleClick}
         className="flex h-12 w-full cursor-pointer items-center justify-center rounded-xl bg-[#0053E0] px-6 text-base font-bold text-white transition hover:bg-[#0044b8]"
       >
         {cta}
@@ -382,6 +419,8 @@ function SearchField({
   type = "text",
   disabled = false,
   value,
+  min,
+  max,
   onChange,
 }: {
   label: string;
@@ -389,6 +428,8 @@ function SearchField({
   type?: "text" | "date";
   disabled?: boolean;
   value?: string;
+  min?: string;
+  max?: string;
   onChange?: (value: string) => void;
 }) {
   return (
@@ -401,6 +442,8 @@ function SearchField({
         placeholder={placeholder}
         disabled={disabled}
         value={value}
+        min={min}
+        max={max}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         className={`min-w-0 flex-1 rounded-[10px] border px-4 py-3 text-sm focus:outline-none ${
           disabled
