@@ -77,4 +77,4 @@ Mutation 成功後會自動 `invalidateQueries` 讓相關的 list/detail 重新�
 
 - 目前所有 admin 頁面（trips、journey-share 等）仍使用各自 `data.ts` 內的假資料，尚未替換成上述 hook——這是刻意分階段進行，架構已就緒可隨時串接
 - `types/` 中標註「Provisional read model」的型別是根據後端 request schema 推測的回傳形狀（後端 OpenAPI 目前對 GET 端點沒有宣告明確的 `response_model`），實際串接該資源時應以真實回傳資料校正
-- 環境變數範例見 `.env.local.example`（`NEXT_PUBLIC_API_URL`）
+- 環境變數範例見 `.env.local.example`（`NEXT_PUBLIC_API_URL`、`NEXT_PUBLIC_TURNSTILE_SITE_KEY`）

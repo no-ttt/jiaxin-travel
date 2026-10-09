@@ -1,13 +1,11 @@
 import { apiFetch } from "../client";
 import type { Paginated } from "../types/common";
 import type {
-  CustomGroupDetail,
   CustomGroupIn,
   Inquiry,
   InquiryListFilters,
   InquiryPatch,
   InquiryStats,
-  NameIn,
   TripInquiryIn,
 } from "../types/inquiry";
 
@@ -39,12 +37,8 @@ export const inquiriesApi = {
     apiFetch<void>("/public/inquiries/trip", { method: "POST", body: payload, auth: false }),
 
   submitCustomGroup: (payload: CustomGroupIn) =>
-    apiFetch<CustomGroupDetail>("/public/inquiries/custom-group", {
-      method: "POST",
-      body: payload,
-      auth: false,
-    }),
+    apiFetch<void>("/public/inquiries/custom-group", { method: "POST", body: payload, auth: false }),
 
-  submitMeian: (payload: NameIn) =>
+  submitMeian: (payload: CustomGroupIn) =>
     apiFetch<void>("/public/inquiries/meian", { method: "POST", body: payload, auth: false }),
 };

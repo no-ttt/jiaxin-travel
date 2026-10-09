@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Dropdown from "@/components/ui/Dropdown";
+import TurnstileWidget from "@/components/ui/TurnstileWidget";
+import { ApiError } from "@/lib/api/client";
+import { inquiriesApi } from "@/lib/api/endpoints/inquiries";
+import type { CompanionNeed } from "@/lib/api/types/inquiry";
 
 const TRAVEL_NATURE_OPTIONS = ["家庭旅遊", "朋友聚會", "企業包團", "蜜月旅行", "其他"];
 const BUDGET_OPTIONS = ["3 萬以下", "3–5 萬", "5–8 萬", "8–12 萬", "12 萬以上"];
 const TIME_SLOTS = ["上午（09:00-12:00）", "下午（13:00-17:00）", "晚上（18:00-20:00）"];
-const COMPANION_NEEDS = ["嬰幼兒", "銀髮長輩", "行動不便者", "寵物同行"];
+const COMPANION_NEEDS: CompanionNeed[] = ["嬰幼兒", "銀髮長輩", "行動不便者", "寵物同行"];
 
 function ClipboardListIcon() {
   return (
@@ -163,21 +167,29 @@ export default function CustomTripForm({
   title = "客製包團需求單",
   description = "請填寫以下資訊，我們將在 24 小時內與您聯繫。",
   showHeading = true,
+  kind = "custom-group",
 }: {
   eyebrow?: string;
   title?: string;
   description?: string;
   showHeading?: boolean;
+  /** Which public inquiry endpoint receives the submission. */
+  kind?: "custom-group" | "meian";
 } = {}) {
-  const [companionNeeds, setCompanionNeeds] = useState<Set<string>>(new Set());
+  const [companionNeeds, setCompanionNeeds] = useState<Set<CompanionNeed>>(new Set());
   const [includesFlight, setIncludesFlight] = useState<"with" | "without" | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [tripNature, setTripNature] = useState("");
   const [budget, setBudget] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const handleToken = useCallback((token: string | null) => setTurnstileToken(token), []);
 
-  const toggleCompanionNeed = (need: string) => {
+  const toggleCompanionNeed = (need: CompanionNeed) => {
     setCompanionNeeds((prev) => {
       const next = new Set(prev);
       if (next.has(need)) next.delete(need);
@@ -186,10 +198,66 @@ export default function CustomTripForm({
     });
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!agreed) return;
-    setSubmitted(true);
+    if (!agreed || isSubmitting) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const field = (name: string) => String(data.get(name) ?? "").trim();
+    const count = (name: string) => (field(name) ? Number(field(name)) : null);
+
+    setError(null);
+    if (!field("phone") && !field("lineId")) {
+      setError("聯絡電話與 Line ID 請至少填寫一項。");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const submit = kind === "meian" ? inquiriesApi.submitMeian : inquiriesApi.submitCustomGroup;
+      await submit({
+        name: field("name"),
+        email: field("email"),
+        phone: field("phone"),
+        line_id: field("lineId"),
+        company: field("company"),
+        preferred_contact_time: preferredTime,
+        consent: agreed,
+        turnstile_token: turnstileToken,
+        website: field("website"),
+        detail: {
+          destination: field("destination"),
+          travel_style: tripNature,
+          days: field("days"),
+          departure: field("departureDate"),
+          adults: count("adults"),
+          children: count("children"),
+          companion_needs: [...companionNeeds],
+          budget,
+          flight_included: includesFlight === null ? null : includesFlight === "with",
+          notes: field("requestNote"),
+        },
+      });
+      setSubmitted(true);
+      form.reset();
+      setCompanionNeeds(new Set());
+      setIncludesFlight(null);
+      setTripNature("");
+      setBudget("");
+      setPreferredTime("");
+      setAgreed(false);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? (err.detail as { error?: { message?: string } } | undefined)?.error?.message
+          : undefined;
+      setError(message ?? "送出失敗，請稍後再試。");
+    } finally {
+      setIsSubmitting(false);
+      // A Turnstile token is single-use: issue a fresh challenge after each attempt.
+      setTurnstileToken(null);
+      setTurnstileResetKey((key) => key + 1);
+    }
   };
 
   return (
@@ -383,12 +451,23 @@ export default function CustomTripForm({
               </span>
             </label>
 
+            {/* Honeypot for bots: hidden from people, must stay empty. */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              className="absolute -left-[9999px] h-0 w-0 opacity-0"
+            />
+            <TurnstileWidget onToken={handleToken} resetKey={turnstileResetKey} />
+            {error && <p className="text-sm font-medium text-[#C71A1A]">{error}</p>}
             <button
               type="submit"
-              disabled={!agreed}
+              disabled={!agreed || isSubmitting}
               className="flex h-14 w-full cursor-pointer items-center justify-center rounded-xl bg-[#0053E0] text-[17px] font-medium text-white transition hover:bg-[#0044b8] disabled:cursor-not-allowed disabled:bg-[#B7CCF2]"
             >
-              立即送出需求單
+              {isSubmitting ? "送出中…" : "立即送出需求單"}
             </button>
 
             {submitted && (

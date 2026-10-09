@@ -45,7 +45,7 @@ export default function MeianInquirySection() {
         </span>
       </button>
 
-      {isOpen && <CustomTripForm showHeading={false} />}
+      {isOpen && <CustomTripForm showHeading={false} kind="meian" />}
     </div>
   );
 }

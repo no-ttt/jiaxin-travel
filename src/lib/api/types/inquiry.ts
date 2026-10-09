@@ -1,10 +1,6 @@
 export type InquiryKind = "trip" | "custom_group" | "meian";
 export type InquiryStatus = "new" | "in_progress" | "closed";
 
-export type NameIn = {
-  name: string;
-};
-
 /** POST /public/inquiries/trip (TripInquiryIn in the OpenAPI spec). */
 export type TripInquiryIn = {
   trip_code: string;
@@ -27,16 +23,31 @@ export type TripInquiryIn = {
   website?: string;
 };
 
-export type CustomGroupIn = {
-  name: string;
-  phone: string;
-  email?: string;
-  destination?: string;
-  message?: string;
+export type CompanionNeed = "嬰幼兒" | "銀髮長輩" | "行動不便者" | "寵物同行";
+
+/** Trip requirements nested in CustomGroupIn (CustomGroupDetail in the OpenAPI spec). */
+export type CustomGroupDetail = {
+  /** max 100 */
+  destination: string;
+  /** max 50 */
+  travel_style?: string;
+  /** max 20 */
+  days?: string;
+  /** max 50 */
+  departure?: string;
+  adults?: number | null;
+  children?: number | null;
+  companion_needs?: CompanionNeed[];
+  /** max 30 */
+  budget?: string;
+  flight_included?: boolean | null;
+  /** max 300 */
+  notes?: string;
 };
 
-export type CustomGroupDetail = CustomGroupIn & {
-  id: string;
+/** POST /public/inquiries/custom-group and /public/inquiries/meian (CustomGroupIn). */
+export type CustomGroupIn = Omit<TripInquiryIn, "trip_code"> & {
+  detail: CustomGroupDetail;
 };
 
 export type InquiryPatch = Partial<{

@@ -24,6 +24,8 @@ declare global {
 
 const SCRIPT_ID = "cf-turnstile-script";
 const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+// Site keys are public. The production build (backend repo) excludes .env*, so keep a default.
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAAEzKc_OpEtqWW8hZ";
 
 function loadTurnstile(): Promise<TurnstileApi> {
   if (window.turnstile) return Promise.resolve(window.turnstile);
@@ -44,8 +46,8 @@ function loadTurnstile(): Promise<TurnstileApi> {
 }
 
 /**
- * Cloudflare Turnstile human check, required by the public inquiry APIs. Renders nothing until
- * NEXT_PUBLIC_TURNSTILE_SITE_KEY is configured (the backend then rejects submissions with 400).
+ * Cloudflare Turnstile human check, required by the public inquiry APIs. The site key comes from
+ * NEXT_PUBLIC_TURNSTILE_SITE_KEY, falling back to the production key.
  * `resetKey` re-issues the challenge, e.g. after a submission consumed the token.
  */
 export default function TurnstileWidget({
@@ -55,7 +57,7 @@ export default function TurnstileWidget({
   onToken: (token: string | null) => void;
   resetKey?: unknown;
 }) {
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const siteKey = SITE_KEY;
   const containerRef = useRef<HTMLDivElement>(null);
   const onTokenRef = useRef(onToken);
 
