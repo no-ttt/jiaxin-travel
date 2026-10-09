@@ -1,0 +1,43 @@
+name: Trigger backend deploy
+
+# 推到 main 後，通知後端 repo（alps40411/chiahsin-travel-backend）的「Deploy Frontend」
+# 重新建置本專案（next build，output:'export'）並發布到正式站 https://www.chtravels.com。
+#
+# 需要 repo secret：BACKEND_DEPLOY_TOKEN
+#   由後端 repo 擁有者提供的 fine-grained PAT，僅限該 repo、權限「Actions: Read and write」。
+#   尚未設定時本 workflow 只會印警告並結束；後端每日 02:17（台北）仍會自動建置一次。
+#
+# 進度看這裡：https://github.com/alps40411/chiahsin-travel-backend/actions/workflows/deploy-frontend.yml
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 連續多次 push 只保留最後一次通知
+concurrency:
+  group: trigger-backend-deploy
+  cancel-in-progress: true
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch "Deploy Frontend" on backend repo
+        env:
+          TOKEN: ${{ secrets.BACKEND_DEPLOY_TOKEN }}
+          SHA: ${{ github.sha }}
+          BACKEND_REPO: alps40411/chiahsin-travel-backend
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::尚未設定 secret BACKEND_DEPLOY_TOKEN，略過通知（後端每日 02:17 仍會自動部署）"
+            exit 0
+          fi
+          printf '{"ref":"main","inputs":{"ref":"%s"}}' "$SHA" > payload.json
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$BACKEND_REPO/actions/workflows/deploy-frontend.yml/dispatches" \
+            --data @payload.json
+          echo "已通知後端建置 $SHA，約 1～2 分鐘後上線。"
