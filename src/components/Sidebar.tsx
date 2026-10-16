@@ -38,6 +38,9 @@ export default function Sidebar({
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navRef = useRef<HTMLElement>(null);
+  const itemRefs = useRef(new Map<string, HTMLDivElement>());
+  // The flyout hangs off the nav (not its item) so the scrolling list doesn't clip it.
+  const [flyoutTop, setFlyoutTop] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -69,6 +72,13 @@ export default function Sidebar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
 
+  const updateFlyoutTop = (key: string | null) => {
+    const nav = navRef.current;
+    const item = key ? itemRefs.current.get(key) : null;
+    if (!nav || !item) return;
+    setFlyoutTop(item.getBoundingClientRect().top - nav.getBoundingClientRect().top - nav.clientTop);
+  };
+
   const cancelClose = () => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
@@ -83,14 +93,18 @@ export default function Sidebar({
     }, CLOSE_DELAY_MS);
   };
 
-  const navClassName = `fixed left-0 top-[var(--header-height)] z-40 flex max-h-[calc(100vh-var(--header-height))] w-[85vw] max-w-[280px] flex-col gap-1 overflow-y-auto border border-l-0 border-slate-200 bg-white p-3 shadow-[0px_2px_10px_0px_rgba(0,0,0,0.04),0px_10px_24px_-10px_rgba(0,0,0,0.03)] transition-transform duration-300 md:max-h-none md:w-[280px] md:overflow-visible ${
+  const navClassName = `fixed left-0 top-[var(--header-height)] z-40 w-[85vw] max-w-[280px] border border-l-0 border-slate-200 bg-white shadow-[0px_2px_10px_0px_rgba(0,0,0,0.04),0px_10px_24px_-10px_rgba(0,0,0,0.03)] transition-transform duration-300 md:w-[280px] ${
     isOpen ? "translate-x-0" : "-translate-x-full"
   }`;
+  // Scrolls when the categories outgrow the viewport (2px = the nav's top/bottom border).
+  const listClassName = "flex max-h-[calc(100vh-var(--header-height)-2px)] flex-col gap-1 overflow-y-auto p-3";
 
   if (isLoading) {
     return (
       <nav ref={navRef} aria-hidden={!isOpen} className={navClassName}>
-        <span className="px-4 py-3 text-sm text-[#94969C]">載入導覽選單中…</span>
+        <div className={listClassName}>
+          <span className="px-4 py-3 text-sm text-[#94969C]">載入導覽選單中…</span>
+        </div>
       </nav>
     );
   }
@@ -98,97 +112,108 @@ export default function Sidebar({
   if (!navigation || navigation.categories.length === 0) {
     return (
       <nav ref={navRef} aria-hidden={!isOpen} className={navClassName}>
-        <span className="px-4 py-3 text-sm text-[#B45309]">導覽選單資料缺少（API 無回應）</span>
+        <div className={listClassName}>
+          <span className="px-4 py-3 text-sm text-[#B45309]">導覽選單資料缺少（API 無回應）</span>
+        </div>
       </nav>
     );
   }
 
   return (
     <nav ref={navRef} aria-hidden={!isOpen} className={navClassName}>
-      {navigation.categories.map((category: NavCategoryPublic) => {
-        const isHovered = hoveredKey === category.key;
-        const isExpanded = expandedKey === category.key;
-        const isActive = isHovered || isExpanded;
-        const options = category.submenu_enabled
-          ? flyoutOptionsFor(category.key, navigation.regions, navigation.themes)
-          : [];
+      <div className={listClassName} onScroll={() => updateFlyoutTop(hoveredKey)}>
+        {navigation.categories.map((category: NavCategoryPublic) => {
+          const isHovered = hoveredKey === category.key;
+          const isExpanded = expandedKey === category.key;
+          const isActive = isHovered || isExpanded;
+          const options = category.submenu_enabled
+            ? flyoutOptionsFor(category.key, navigation.regions, navigation.themes)
+            : [];
 
-        return (
-          <div
-            key={category.key}
-            className="relative"
-            onMouseEnter={() => {
-              cancelClose();
-              setHoveredKey(category.key);
-            }}
-            onMouseLeave={() => scheduleClose(category.key)}
-          >
-            <a
-              href={category.submenu_enabled ? undefined : (category.redirect_url ?? "#")}
-              onClick={(event) => {
-                if (!category.submenu_enabled) return;
-                event.preventDefault();
-                setExpandedKey((current) => (current === category.key ? null : category.key));
+          return (
+            <div
+              key={category.key}
+              ref={(el) => {
+                if (el) itemRefs.current.set(category.key, el);
+                else itemRefs.current.delete(category.key);
               }}
-              className={`flex h-20 cursor-pointer items-stretch gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors ${
-                isActive ? "bg-[#ECF1FA] text-[#090909]" : "text-slate-500 hover:bg-slate-50"
-              }`}
+              onMouseEnter={() => {
+                cancelClose();
+                setHoveredKey(category.key);
+                updateFlyoutTop(category.key);
+              }}
+              onMouseLeave={() => scheduleClose(category.key)}
             >
-              <span
-                className={`w-1 shrink-0 self-stretch rounded-[20px] bg-[#0053E0] transition-opacity ${
-                  isActive ? "opacity-100" : "opacity-0"
+              <a
+                href={category.submenu_enabled ? undefined : (category.redirect_url ?? "#")}
+                onClick={(event) => {
+                  if (!category.submenu_enabled) return;
+                  event.preventDefault();
+                  setExpandedKey((current) => (current === category.key ? null : category.key));
+                }}
+                className={`flex h-20 cursor-pointer items-stretch gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                  isActive ? "bg-[#ECF1FA] text-[#090909]" : "text-slate-500 hover:bg-slate-50"
                 }`}
-              />
-              <span className="flex items-center">{category.display_name}</span>
-            </a>
+              >
+                <span
+                  className={`w-1 shrink-0 self-stretch rounded-[20px] bg-[#0053E0] transition-opacity ${
+                    isActive ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+                <span className="flex items-center">{category.display_name}</span>
+              </a>
 
-            {category.submenu_enabled && (
-              <>
-                {isHovered && (
-                  <div className="absolute left-full top-0 z-20 ml-6 hidden w-max rounded-[18px] border border-slate-200 bg-white p-8 shadow-[0px_12px_34px_-6px_rgba(5,18,36,0.12)] md:block">
-                    <h3 className="mb-6 text-xl font-bold text-[#090909]">{category.display_name}</h3>
-                    {options.length > 0 ? (
-                      <div className="grid grid-cols-4 gap-x-16 gap-y-6">
-                        {options.map((option) => (
+              {category.submenu_enabled && (
+                <>
+                  {isHovered && (
+                    <div
+                      style={{ top: flyoutTop }}
+                      className="absolute left-full z-20 ml-3 hidden w-max rounded-[18px] border border-slate-200 bg-white p-8 shadow-[0px_12px_34px_-6px_rgba(5,18,36,0.12)] md:block"
+                    >
+                      <h3 className="mb-6 text-xl font-bold text-[#090909]">{category.display_name}</h3>
+                      {options.length > 0 ? (
+                        <div className="grid grid-cols-4 gap-x-16 gap-y-6">
+                          {options.map((option) => (
+                            <Link
+                              key={option.label}
+                              href={option.href}
+                              onClick={onClose}
+                              className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-base text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-slate-50 hover:text-[#0053E0]"
+                            >
+                              {option.label}
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-[#94969C]">尚無子選項</span>
+                      )}
+                    </div>
+                  )}
+
+                  {isExpanded && (
+                    <div className="mb-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 md:hidden">
+                      {options.length > 0 ? (
+                        options.map((option) => (
                           <Link
                             key={option.label}
                             href={option.href}
                             onClick={onClose}
-                            className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-base text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-slate-50 hover:text-[#0053E0]"
+                            className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-sm text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-white hover:text-[#0053E0]"
                           >
                             {option.label}
                           </Link>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-sm text-[#94969C]">尚無子選項</span>
-                    )}
-                  </div>
-                )}
-
-                {isExpanded && (
-                  <div className="mb-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 md:hidden">
-                    {options.length > 0 ? (
-                      options.map((option) => (
-                        <Link
-                          key={option.label}
-                          href={option.href}
-                          onClick={onClose}
-                          className="flex cursor-pointer items-center rounded-lg border border-transparent px-3 py-2.5 text-sm text-[#090909] transition-colors duration-150 hover:border-slate-200 hover:bg-white hover:text-[#0053E0]"
-                        >
-                          {option.label}
-                        </Link>
-                      ))
-                    ) : (
-                      <span className="col-span-2 px-3 py-2.5 text-sm text-[#94969C]">尚無子選項</span>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        );
-      })}
+                        ))
+                      ) : (
+                        <span className="col-span-2 px-3 py-2.5 text-sm text-[#94969C]">尚無子選項</span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </nav>
   );
 }

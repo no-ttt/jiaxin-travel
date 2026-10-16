@@ -22,6 +22,7 @@ const RESULTS_PER_PAGE = 6;
 
 const SORT_TO_API: Record<SortOption, string> = {
   popular: "popular",
+  newest: "newest",
   "departure-date": "departure_date",
   "price-desc": "price_desc",
   "price-asc": "price_asc",

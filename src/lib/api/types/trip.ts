@@ -244,7 +244,7 @@ export type PublicTripSearchParams = Partial<{
   departure_months: number[];
   date_from: string;
   date_to: string;
-  /** "popular" | "price_asc" | "price_desc" | "departure_date" */
+  /** "popular" | "newest" | "price_asc" | "price_desc" | "departure_date" */
   sort: string;
   page: number;
   limit: number;
