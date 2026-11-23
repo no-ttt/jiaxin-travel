@@ -28,6 +28,7 @@ import type { Media } from "@/lib/api/types/media";
 import type { TripDetail } from "@/lib/api/types/trip";
 import type { CategoriesDraft } from "../categories/data";
 import type { JourneyCard } from "../journey-share/data";
+import { STATIC_ANNOUNCEMENTS, STATIC_CANCELLATION_POLICY } from "@/components/terms/staticPolicyPages";
 import { useMediaMap } from "./useMediaMap";
 import type { PreviewKey } from "./draft-store";
 
@@ -231,10 +232,10 @@ function TermsPreview({ pageKey, doc }: { pageKey: TermsKey; doc: unknown }) {
     <Seeded entries={purchaseFlow ? [[["public", "purchase-flow"], purchaseFlow]] : []}>
       <TermsView
         purchaseFlow={purchaseFlow}
-        cancellationPolicy={pages["cancellation-policy"] as PolicyPage | null}
+        cancellationPolicy={STATIC_CANCELLATION_POLICY}
         contract={pages.contract as ContractPage | null}
         fraudNotice={pages["fraud-notice"] as FraudNoticePage | null}
-        announcements={pages.announcements as PolicyPage | null}
+        announcements={STATIC_ANNOUNCEMENTS}
       />
     </Seeded>
   );
