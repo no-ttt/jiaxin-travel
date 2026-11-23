@@ -19,17 +19,29 @@
   --font-serif: var(--font-noto-serif-tc);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* 固定淺色：不跟隨電腦的深色模式（原生輸入框、捲軸也維持淺色）。 */
+:root {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
+}
+
+/*
+ * 點擊按鈕、連結後瀏覽器預設會畫一圈藍色外框（focus ring），依需求拿掉。
+ * 放在 base layer，元件自己用 Tailwind 加的 focus 樣式（例如輸入框的藍色邊框）仍然有效。
+ */
+@layer base {
+  button:focus,
+  a:focus,
+  [role="button"]:focus,
+  [role="switch"]:focus,
+  summary:focus {
+    outline: none;
+  }
 }
 
 @keyframes journey-album-fade-in {
@@ -45,4 +57,38 @@ body {
 [data-admin] ::placeholder {
   color: #b4bed1;
   opacity: 1;
+}
+
+/* 特色景點 (trip detail): text keeps the admin editor's formatting; the dot is brand blue unless the item's text has a color. */
+.trip-highlights ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  padding: 0;
+}
+.trip-highlights ul > li {
+  position: relative;
+  padding-left: 10px;
+}
+.trip-highlights ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: calc(0.8em - 3px);
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #0053e0;
+}
+.trip-highlights ul > li[style*="color"]::before {
+  background: currentColor;
+}
+.trip-highlights ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.trip-highlights a {
+  color: #0053e0;
+  text-decoration: underline;
 }

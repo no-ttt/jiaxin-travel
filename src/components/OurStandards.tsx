@@ -9,7 +9,7 @@ export type Standard = {
 
 function StandardCard({ standard }: { standard: Standard }) {
   return (
-    <div className="flex flex-1 flex-col items-stretch rounded-[20px] border border-[#E0E3E8] bg-white px-6 py-8 shadow-[0px_6px_20px_0px_rgba(0,35,102,0.06)]">
+    <div className="flex flex-1 flex-col items-stretch rounded-[20px] border border-[#E0E3E8] bg-white px-6 pb-8 pt-6 shadow-[0px_6px_20px_0px_rgba(0,35,102,0.06)]">
       <div className="flex flex-col items-center gap-5">
         {/* The uploaded icon is the design's whole 52×52 badge (circle included), so it fills the box. */}
         <div className="relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full bg-[#DBE8FF]">

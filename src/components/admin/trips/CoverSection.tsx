@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AdminPromptDialog from "@/components/admin/ui/AdminPromptDialog";
 import AdminSpinner from "@/components/admin/ui/AdminSpinner";
+import RichTextEditor from "./RichTextEditor";
 import { useMedia } from "@/lib/api/hooks/useMedia";
 import { useMediaUpload } from "@/components/admin/ui/useMediaUpload";
 import type { TripForm, TripFormChange } from "./form";
@@ -161,6 +162,17 @@ export default function CoverSection({
             rows={3}
             className="w-full resize-none rounded-lg border border-[#E0E3E8] bg-white px-3.5 py-[11px] text-sm font-medium leading-[1.6em] text-[#090909] outline-none focus:border-[#0053E0]"
           />
+        </div>
+
+        <div className="flex flex-col gap-[7px]">
+          <span className="text-sm font-bold leading-[1.45em] text-[#090909]">特色景點</span>
+          <RichTextEditor
+            value={value.highlights_html}
+            onChange={(html) => onChange({ highlights_html: html })}
+          />
+          <p className="text-xs leading-[1.45em] text-[#535F71]">
+            支援多段文字、清單與粗體；前台將依編輯器格式呈現。
+          </p>
         </div>
 
         {value.service_tags_visible && (

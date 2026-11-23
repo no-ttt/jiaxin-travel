@@ -1,4 +1,4 @@
-import type { JourneyWithAlbum } from "@/lib/api/hooks/useJourneys";
+import type { Album, Journey } from "@/lib/api/types/journey";
 import { generateId } from "../ui/generateId";
 
 export const JOURNEY_NAME_MAX = 60;
@@ -21,6 +21,8 @@ export type JourneyCard = {
   rating: string;
   albumTitle: string;
   media: JourneyMedia[];
+  /** False until this journey's album is fetched (when its tab is opened); unloaded albums are never saved. */
+  albumLoaded: boolean;
 };
 
 /** A partial update, or one computed from the card's latest state. */
@@ -37,6 +39,7 @@ export function createJourneyCard(): JourneyCard {
     rating: "★★★★★",
     albumTitle: "",
     media: [],
+    albumLoaded: true,
   };
 }
 
@@ -44,8 +47,8 @@ export function createJourneyMedia(mediaId: string): JourneyMedia {
   return { key: generateId("media"), mediaId, caption: "" };
 }
 
-export function toJourneyCards(rows: JourneyWithAlbum[]): JourneyCard[] {
-  return rows.map(({ journey, album }) => ({
+export function toJourneyCards(journeys: Journey[]): JourneyCard[] {
+  return journeys.map((journey) => ({
     key: journey.id,
     id: journey.id,
     name: journey.name,
@@ -53,14 +56,23 @@ export function toJourneyCards(rows: JourneyWithAlbum[]): JourneyCard[] {
     coverMediaId: journey.cover?.id ?? journey.cover_media_id ?? null,
     review: journey.quote ?? "",
     rating: journey.rating_text ?? "",
-    albumTitle: journey.album_title ?? album.album_title ?? "",
+    albumTitle: journey.album_title ?? "",
+    media: [],
+    albumLoaded: false,
+  }));
+}
+
+/** Fills a card with its freshly fetched album (applied to both the server copy and the draft). */
+export function withAlbum(card: JourneyCard, album: Album): JourneyCard {
+  return {
+    ...card,
+    albumTitle: card.albumTitle || (album.album_title ?? ""),
     media: (album.items ?? []).flatMap((item, i) => {
       const mediaId = item.media?.id ?? item.media_id;
-      return mediaId
-        ? [{ key: item.id ?? `${journey.id}-media-${i}`, mediaId, caption: item.caption ?? "" }]
-        : [];
+      return mediaId ? [{ key: item.id ?? `${card.key}-media-${i}`, mediaId, caption: item.caption ?? "" }] : [];
     }),
-  }));
+    albumLoaded: true,
+  };
 }
 
 export const isNameValid = (name: string) => {

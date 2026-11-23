@@ -1,5 +1,6 @@
 "use client";
 
+import AdminFileUpload from "../ui/AdminFileUpload";
 import AdminInfoNote from "../ui/AdminInfoNote";
 import AdminTextInput from "../ui/AdminTextInput";
 import type { ContractDocument } from "./data";
@@ -26,11 +27,15 @@ export default function DocumentSection({
         onChange={(v) => onChange({ documentTitle: v })}
       />
       <AdminTextInput label="連結顯示文字" value={document.linkText} onChange={(v) => onChange({ linkText: v })} />
-      <AdminTextInput
-        label="下載連結網址／檔案"
-        value={document.fileUrl}
-        onChange={(v) => onChange({ fileUrl: v })}
-      />
+      <div className="flex flex-col gap-[7px]">
+        <span className="text-[13px] font-medium leading-[1.45em] text-[#090909]">契約書檔案下載</span>
+        <AdminFileUpload
+          mediaId={document.mediaId}
+          fallbackUrl={document.fileUrl}
+          onUploaded={(mediaId) => onChange({ mediaId, fileUrl: "" })}
+          onRemove={() => onChange({ mediaId: null, fileUrl: "" })}
+        />
+      </div>
 
       <AdminInfoNote>此區塊對應「旅遊契約書」頁籤的文件標題與下載連結（藍色底線樣式顯示）。</AdminInfoNote>
     </section>

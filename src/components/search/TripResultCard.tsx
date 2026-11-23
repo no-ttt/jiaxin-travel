@@ -17,17 +17,18 @@ export type TripResult = {
 export default function TripResultCard({ trip }: { trip: TripResult }) {
   const { prefix, suffix } = priceAffixes(trip.currency);
   return (
-    <div className="flex overflow-hidden rounded-2xl bg-white shadow-[0px_10px_28px_0px_rgba(8,28,58,0.07)]">
-      <div className="relative h-64 w-[360px] shrink-0">
+    // Phones: photo on top, text below; side by side from md up.
+    <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_10px_28px_0px_rgba(8,28,58,0.07)] md:flex-row">
+      <div className="relative h-52 w-full shrink-0 sm:h-64 md:w-[360px]">
         {trip.image ? (
-          <Image src={trip.image} alt={trip.title} fill sizes="360px" className="object-cover" />
+          <Image src={trip.image} alt={trip.title} fill sizes="(min-width: 768px) 360px, 100vw" className="object-cover" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-[#E0E3E8] text-sm text-[#94969C]">
             無圖片
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-8 p-6">
+      <div className="flex flex-1 flex-col gap-5 p-5 md:gap-8 md:p-6">
         <div className="flex flex-1 flex-col gap-3">
           <h3 className="text-xl font-medium text-[#1A1C1E]">{trip.title}</h3>
           <p className="text-sm leading-relaxed text-[#5B6574]">{trip.description}</p>

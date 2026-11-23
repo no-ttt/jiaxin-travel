@@ -1,11 +1,18 @@
 import { mediaApi } from "./endpoints/media";
 import type { Media, MediaPurpose } from "./types/media";
 
-/** "auto" picks video for video files and image for everything else (e.g. mixed album uploads). */
+/**
+ * "auto" picks by file type: video for video files, pdf for PDFs, image for everything else
+ * (e.g. mixed album uploads, or a downloadable PDF／JPG／PNG).
+ */
 export type UploadPurpose = MediaPurpose | "auto";
 
-export const resolvePurpose = (file: File, purpose: UploadPurpose): MediaPurpose =>
-  purpose === "auto" ? (file.type.startsWith("video/") ? "video" : "image") : purpose;
+export const resolvePurpose = (file: File, purpose: UploadPurpose): MediaPurpose => {
+  if (purpose !== "auto") return purpose;
+  if (file.type.startsWith("video/")) return "video";
+  if (file.type === "application/pdf") return "pdf";
+  return "image";
+};
 
 /**
  * Presigned upload flow:

@@ -26,10 +26,39 @@ export default function ServiceTable({ columns, rows }: ServiceTableProps) {
 
   return (
     <>
-      <div className="w-full overflow-x-auto rounded-[18px] border border-[#E0E3E8] bg-white">
-        <div className="min-w-[720px]">
+      {/* Phones: one card per row (the table's fixed columns don't fit). */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="flex flex-col gap-3 rounded-[18px] border border-[#E0E3E8] bg-white p-4">
+            <p className="text-[15px] font-medium leading-[1.45em] text-[#090909]">{row.item}</p>
+            <dl className="grid grid-cols-3 gap-2 rounded-xl bg-[#F6F8FC] p-3 text-center">
+              {[
+                [validityLabel, row.validity],
+                [durationLabel, row.duration],
+                [feeLabel, row.fee],
+              ].map(([label, value]) => (
+                <div key={label} className="flex flex-col gap-1">
+                  <dt className="text-xs text-[#535F71]">{label}</dt>
+                  <dd className="text-sm font-medium text-[#090909]">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <button
+              type="button"
+              onClick={() => setSelectedRow(row)}
+              className="flex h-[38px] w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[#C3C6D6] bg-white text-[13px] font-medium text-[#0053E0] hover:bg-[#F5F8FF]"
+            >
+              查看詳情
+              <Image src="/images/chevron-right-icon.svg" alt="" width={16} height={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden w-full overflow-x-auto rounded-[18px] border border-[#E0E3E8] bg-white md:block">
+        <div className="min-w-[880px]">
           <div className="flex h-[54px] items-center bg-[#ECF1FA] text-[13px] font-medium text-[#090909]">
-            <div className="flex-[2] px-[18px]">{itemLabel}</div>
+            <div className="min-w-[160px] flex-[2] px-[18px]">{itemLabel}</div>
             <div className="w-[150px] shrink-0 px-[18px] text-center">{validityLabel}</div>
             <div className="w-[190px] shrink-0 px-[18px] text-center">{durationLabel}</div>
             <div className="w-[180px] shrink-0 px-[18px] text-center">{feeLabel}</div>
@@ -41,7 +70,7 @@ export default function ServiceTable({ columns, rows }: ServiceTableProps) {
               key={row.id}
               className="flex h-16 items-center border-t border-[#E0E3E8] text-sm text-[#535F71]"
             >
-              <div className="flex-[2] px-[18px] text-[#090909]">{row.item}</div>
+              <div className="min-w-[160px] flex-[2] px-[18px] text-[#090909]">{row.item}</div>
               <div className="w-[150px] shrink-0 px-[18px] text-center">{row.validity}</div>
               <div className="w-[190px] shrink-0 px-[18px] text-center">{row.duration}</div>
               <div className="w-[180px] shrink-0 px-[18px] text-center">{row.fee}</div>

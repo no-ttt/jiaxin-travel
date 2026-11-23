@@ -128,16 +128,31 @@ function TextInput({
   type = "text",
   placeholder,
   required,
+  digitsOnly,
+  maxLength,
 }: {
   name: string;
   type?: string;
   placeholder: string;
   required?: boolean;
+  /** Plain text box that only keeps 0-9 (no spinner, no minus sign or decimals). */
+  digitsOnly?: boolean;
+  maxLength?: number;
 }) {
   return (
     <input
       name={name}
-      type={type}
+      type={digitsOnly ? "text" : type}
+      inputMode={digitsOnly ? "numeric" : undefined}
+      onChange={
+        digitsOnly
+          ? (event) => {
+              const digits = event.currentTarget.value.replace(/\D/g, "");
+              if (digits !== event.currentTarget.value) event.currentTarget.value = digits;
+            }
+          : undefined
+      }
+      maxLength={maxLength}
       placeholder={placeholder}
       required={required}
       className="h-12 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-sm text-[#090909] placeholder:text-[#888888] focus:border-[#0053E0] focus:outline-none"
@@ -263,7 +278,7 @@ export default function CustomTripForm({
   return (
     <section
       id="custom-trip-form"
-      className={`flex scroll-mt-24 flex-col items-stretch gap-7 px-4 pb-14 sm:px-8 lg:px-[160px] lg:pb-[72px] ${
+      className={`mx-auto flex w-full max-w-[1440px] scroll-mt-24 flex-col items-stretch gap-7 px-4 pb-14 sm:px-8 lg:px-[160px] lg:pb-[72px] ${
         showHeading ? "pt-8 lg:pt-10" : ""
       }`}
     >
@@ -295,7 +310,7 @@ export default function CustomTripForm({
                   <TextInput name="destination" placeholder="輸入目的地（國家、地區或城市）" required />
                 </Field>
                 <Field label="旅遊天數">
-                  <TextInput name="days" placeholder="輸入旅遊天數" />
+                  <TextInput name="days" digitsOnly maxLength={3} placeholder="輸入旅遊天數" />
                 </Field>
               </div>
               <div className="flex flex-1 flex-col gap-5">
@@ -325,10 +340,10 @@ export default function CustomTripForm({
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <Field label="大人人數">
-                <TextInput name="adults" type="number" placeholder="輸入人數" />
+                <TextInput name="adults" digitsOnly maxLength={3} placeholder="輸入人數" />
               </Field>
               <Field label="小孩人數（12 歲以下）">
-                <TextInput name="children" type="number" placeholder="輸入人數" />
+                <TextInput name="children" digitsOnly maxLength={3} placeholder="輸入人數" />
               </Field>
             </div>
 

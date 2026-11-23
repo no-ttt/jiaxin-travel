@@ -1,4 +1,4 @@
-import type { NavCategory, Region, Theme } from "@/lib/api/types/taxonomy";
+import type { NavCategory, PremiumSubcategory, Region, Theme } from "@/lib/api/types/taxonomy";
 import { generateId } from "../ui/generateId";
 
 /** API length limits: nav category display_name 1–20, region/theme name 1–30. */
@@ -60,9 +60,19 @@ export type ThemeDraft = {
   collectionId: number | null;
 };
 
+/** 精緻璽品子分類; `id` is null until saved, `key` is the React key. */
+export type PremiumSubcategoryDraft = {
+  key: string;
+  id: number | null;
+  name: string;
+  visible: boolean;
+  position: number;
+};
+
 export type CategoriesDraft = {
   categories: CategoryDraft[];
   regions: RegionDraft[];
+  premiumSubcategories: PremiumSubcategoryDraft[];
   themes: ThemeDraft[];
 };
 
@@ -70,6 +80,7 @@ export function toCategoriesDraft(
   categories: NavCategory[],
   regions: Region[],
   themes: Theme[],
+  premiumSubcategories: PremiumSubcategory[],
 ): CategoriesDraft {
   return {
     categories: categories.map((cat) => ({
@@ -85,6 +96,13 @@ export function toCategoriesDraft(
       id: region.id,
       name: region.name,
       position: region.position,
+    })),
+    premiumSubcategories: premiumSubcategories.map((sub) => ({
+      key: `premium-${sub.id}`,
+      id: sub.id,
+      name: sub.name,
+      visible: sub.visible,
+      position: sub.position,
     })),
     themes: themes.map((theme) => ({
       key: `theme-${theme.id}`,
@@ -104,6 +122,14 @@ export const newRegion = (rows: RegionDraft[]): RegionDraft => ({
   key: generateId("region"),
   id: null,
   name: "",
+  position: nextPosition(rows),
+});
+
+export const newPremiumSubcategory = (rows: PremiumSubcategoryDraft[]): PremiumSubcategoryDraft => ({
+  key: generateId("premium"),
+  id: null,
+  name: "",
+  visible: true,
   position: nextPosition(rows),
 });
 
@@ -138,16 +164,9 @@ export function isDraftValid(draft: CategoriesDraft): boolean {
     draft.categories.every((cat) => isValidName(cat.displayName, CATEGORY_NAME_MAX)) &&
     draft.regions.every((region) => isValidName(region.name, SUBCATEGORY_NAME_MAX)) &&
     draft.themes.every((theme) => isValidName(theme.name, SUBCATEGORY_NAME_MAX)) &&
+    draft.premiumSubcategories.every((sub) => isValidName(sub.name, SUBCATEGORY_NAME_MAX)) &&
     duplicateNames(draft.regions).size === 0 &&
+    duplicateNames(draft.premiumSubcategories).size === 0 &&
     duplicateNames(draft.themes).size === 0
   );
 }
-
-// 精緻璽品子分類：後端尚無對應 API，暫以本地假資料呈現，不會儲存。
-export type LuxurySubcategory = {
-  id: string;
-  name: string;
-  visible: boolean;
-};
-
-export const INITIAL_LUXURY_SUBCATEGORIES: LuxurySubcategory[] = [];

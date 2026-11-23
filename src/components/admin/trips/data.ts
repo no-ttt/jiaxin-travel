@@ -58,7 +58,7 @@ export const FILTER_GROUPS: Record<FilterGroupKey, { label: string; options: Fil
     options: [
       { value: "overseas_group", label: "國外團體" },
       { value: "theme_travel", label: "主題旅遊" },
-      { value: "premium", label: "精緻臻品" },
+      { value: "premium", label: "精緻璽品" },
       { value: "meian", label: "美安專區" },
     ] satisfies { value: TripZone; label: string }[],
   },

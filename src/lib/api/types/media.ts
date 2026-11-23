@@ -47,6 +47,8 @@ export type Media = {
   /** Images: card / hero / thumb. Videos other than MP4 (e.g. MOV): `web`, an MP4 transcode. */
   variants: Partial<Record<"card" | "hero" | "thumb" | "web", string>>;
   transcode_status: string;
+  /** Original upload name. Not returned by the backend yet (files are stored as original.<ext>). */
+  filename?: string | null;
 };
 
 /** Playable source for a video: the MP4 transcode when the upload wasn't MP4 (browsers can't all play MOV). */

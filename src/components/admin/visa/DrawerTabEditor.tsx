@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from "react";
 import AdminTextInput from "../ui/AdminTextInput";
 import RichTextEditor from "../trips/RichTextEditor";
+import DownloadSourceField from "./DownloadSourceField";
 import type {
   EditableDetail,
   EditableDownload,
@@ -33,21 +34,9 @@ function DividedRows<T extends { _id: string }>({
   ));
 }
 
-function DocDescription({
-  index,
-  value,
-  onChange,
-}: {
-  index: number;
-  value: string;
-  onChange: (html: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-[7px]">
-      <span className="text-sm font-medium leading-[1.45em] text-[#090909]">文件說明 {index + 1}</span>
-      <RichTextEditor value={value} onChange={onChange} placeholder="輸入文件說明" />
-    </div>
-  );
+/** The document's rich-text description (no field label, as in the design). */
+function DocDescription({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+  return <RichTextEditor value={value} onChange={onChange} placeholder="輸入文件說明" />;
 }
 
 export default function DrawerTabEditor({
@@ -106,7 +95,6 @@ export default function DrawerTabEditor({
                   onChange={(title) => updateDoc(doc._id, { title })}
                 />
                 <DocDescription
-                  index={index}
                   value={doc.body_html}
                   onChange={(body_html) => updateDoc(doc._id, { body_html })}
                 />
@@ -136,7 +124,6 @@ export default function DrawerTabEditor({
                   onChange={(title) => updateNoticeDoc(doc._id, { title })}
                 />
                 <DocDescription
-                  index={index}
                   value={doc.body_html}
                   onChange={(body_html) => updateNoticeDoc(doc._id, { body_html })}
                 />
@@ -147,28 +134,49 @@ export default function DrawerTabEditor({
       )}
 
       {tab === "downloads" && (
-        <DividedRows
-          items={detail.downloads}
-          render={(file, index) => (
-            <>
-              <AdminTextInput
-                label={`文件標題 ${index + 1}`}
-                value={file.title}
-                onChange={(title) => updateDownload(file._id, { title })}
-              />
-              <AdminTextInput
-                label={`文件說明 ${index + 1}`}
-                value={file.description}
-                onChange={(description) => updateDownload(file._id, { description })}
-              />
-              <LinkFields
-                index={index}
-                file={file}
-                onChange={(patch) => updateDownload(file._id, patch)}
-              />
-            </>
-          )}
-        />
+        <>
+          <AdminTextInput
+            label="區塊標題"
+            value={detail.downloads_title ?? ""}
+            onChange={(downloads_title) => onChange({ downloads_title })}
+          />
+          <DividedRows
+            items={detail.downloads}
+            render={(file, index) => (
+              <>
+                <AdminTextInput
+                  label={`文件標題 ${index + 1}`}
+                  value={file.title}
+                  onChange={(title) => updateDownload(file._id, { title })}
+                />
+                <div className="flex flex-col gap-[7px]">
+                  <RichTextEditor
+                    value={file.description_html ?? ""}
+                    onChange={(description_html) => updateDownload(file._id, { description_html })}
+                    placeholder="輸入文件說明"
+                  />
+                  <p className="text-xs leading-[1.45em] text-[#535F71]">
+                    支援多段文字、清單與粗體；前台將依編輯器格式呈現。
+                  </p>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-[230px] shrink-0">
+                    <AdminTextInput
+                      label={`下載檔案 ${index + 1}　標籤文字`}
+                      value={file.label}
+                      onChange={(label) => updateDownload(file._id, { label })}
+                    />
+                  </div>
+                  <DownloadSourceField
+                    index={index}
+                    file={file}
+                    onChange={(patch) => updateDownload(file._id, patch)}
+                  />
+                </div>
+              </>
+            )}
+          />
+        </>
       )}
     </div>
   );

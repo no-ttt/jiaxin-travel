@@ -33,6 +33,14 @@ export type Theme = {
   collection_id: number;
 };
 
+/** GET /admin/taxonomy/premium-subcategories row (精緻璽品子分類); create/update take ThemeIn. */
+export type PremiumSubcategory = {
+  id: number;
+  name: string;
+  position: number;
+  visible: boolean;
+};
+
 export type TaxonomyOption = {
   id: number;
   name: string;

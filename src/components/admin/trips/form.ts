@@ -9,6 +9,8 @@ export type TripForm = {
   service_tags: string[];
   service_tags_visible: boolean;
   cover_headline: string;
+  /** 特色景點 editor HTML; saved as-is, plus each list item / line as one plain `highlights` entry. */
+  highlights_html: string;
   duration_days: number | null;
   seo_title: string;
   price_from: number | null;
@@ -46,6 +48,7 @@ export function toTripForm(detail: TripDetail): TripForm {
     service_tags: cover.service_tags,
     service_tags_visible: cover.service_tags_visible,
     cover_headline: cover.cover_headline,
+    highlights_html: cover.highlights_html || highlightsToHtml(cover.highlights ?? []),
     duration_days: cover.duration_days,
     seo_title: basic.seo_title,
     price_from: basic.price_from,
@@ -76,12 +79,48 @@ export function toTripUpdate(form: TripForm): TripUpdate {
   const { tripType, publish_status, ...fields } = form;
   void tripType;
   void publish_status;
+  // Backend caps the plain list at 6 items × 80 chars; the full content lives in highlights_html.
+  const highlights = htmlToHighlights(fields.highlights_html)
+    .slice(0, 6)
+    .map((item) => item.slice(0, 80));
   return {
     ...fields,
+    // Plain-text copy for list uses; the HTML keeps the editor's formatting for the trip page.
+    highlights,
+    highlights_html: highlights.length ? fields.highlights_html : "",
     external_url: fields.external_url.trim() || null,
     source_agency: fields.source_agency.trim() || null,
     badge_id: fields.badge_mode === "custom" ? fields.badge_id : null,
   };
+}
+
+const escapeHtml = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Saved highlights → editor HTML (a bullet list, matching the front-end dot list). */
+export function highlightsToHtml(items: string[]): string {
+  return items.length ? `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "";
+}
+
+/**
+ * Editor HTML → highlights. The API stores plain text only, so each list item / paragraph /
+ * line break becomes one entry; formatting is dropped and typed bullets (˙ • ・) are stripped.
+ */
+export function htmlToHighlights(html: string): string[] {
+  const text = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(li|p|div|h[1-6]|ul|ol)\b[^>]*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+  return text
+    .split("\n")
+    .map((line) => line.replace(/^[\s˙•・·‧]+/, "").trim())
+    .filter(Boolean);
 }
 
 /** "168,000" → 168000; any non-digit is ignored; empty → null. */

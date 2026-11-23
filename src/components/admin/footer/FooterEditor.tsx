@@ -1,5 +1,8 @@
 "use client";
 
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useUnsavedChangesWarning } from "@/components/admin/unsaved/UnsavedChangesProvider";
+import { usePreviewWriter } from "@/components/admin/preview/draft-store";
 import { useState } from "react";
 import AdminPageHeader from "../AdminPageHeader";
 import AdminToast from "../ui/AdminToast";
@@ -22,7 +25,7 @@ function errorMessage(err: unknown): string {
 }
 
 export default function FooterEditor() {
-  const { data: doc, isLoading, isError } = useCmsDocument<FooterDoc>(CMS_KEY);
+  const { data: doc, isError } = useCmsDocument<FooterDoc>(CMS_KEY);
   const putDocument = usePutCmsDocument<FooterDoc>(CMS_KEY);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "warning" } | null>(
     null
@@ -44,6 +47,8 @@ export default function FooterEditor() {
     syncedData !== null &&
     baseline !== null &&
     !isSameFooter(fromEditableFooter(draft, syncedData), baseline);
+  useUnsavedChangesWarning(isDirty);
+  const openPreview = usePreviewWriter("footer", draft, (d) => fromEditableFooter(d, syncedData!));
 
   const updateSection =
     <K extends keyof EditableFooter>(key: K) =>
@@ -61,15 +66,16 @@ export default function FooterEditor() {
   return (
     <div className="flex w-full flex-col gap-7">
       <AdminPageHeader
+        onPreview={openPreview}
         title="網站頁尾設定"
         description="管理網站頁尾（Footer）顯示的品牌資訊、聯絡方式、社群連結與版權宣告文字，套用至所有前台頁面。"
         onSave={handleSave}
         saveDisabled={!isDirty || putDocument.isPending}
       />
 
-      {isLoading ? (
-        <p className="text-sm text-[#535F71]">載入中…</p>
-      ) : isError || !draft ? (
+      {!draft && !isError ? (
+        <AdminLoading />
+      ) : !draft ? (
         <p className="text-sm text-red-600">頁尾資料載入失敗，請重新整理頁面</p>
       ) : (
         <>

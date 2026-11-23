@@ -9,6 +9,9 @@ export type PageIntro = {
 export type ContractDocument = {
   documentTitle: string;
   linkText: string;
+  /** Uploaded contract file (served as the download link). */
+  mediaId: string | null;
+  /** A link saved before uploads (doc_url without a file); shown until a file replaces it. */
   fileUrl: string;
 };
 
@@ -27,7 +30,12 @@ export type EditableContract = {
 export function toEditableContract(doc: ContractPage): EditableContract {
   return {
     pageIntro: { pageTitle: doc.page_title, description: doc.intro_html },
-    contractDocument: { documentTitle: doc.doc_title, linkText: doc.doc_link_text, fileUrl: doc.doc_url },
+    contractDocument: {
+      documentTitle: doc.doc_title,
+      linkText: doc.doc_link_text,
+      mediaId: doc.doc_media_id ?? null,
+      fileUrl: doc.doc_media_id ? "" : doc.doc_url,
+    },
     clauses: doc.sections.map((section) => ({
       id: generateId("clause"),
       title: section.title,
@@ -39,16 +47,15 @@ export function toEditableContract(doc: ContractPage): EditableContract {
 /** `base` is the server copy; fields the editor doesn't know about are kept as they are. */
 export function fromEditableContract(draft: EditableContract, base: ContractPage): ContractPage {
   const { pageIntro, contractDocument, clauses } = draft;
-  const urlChanged = contractDocument.fileUrl !== base.doc_url;
   return {
     ...base,
     page_title: pageIntro.pageTitle,
     intro_html: pageIntro.description,
     doc_title: contractDocument.documentTitle,
     doc_link_text: contractDocument.linkText,
-    doc_url: contractDocument.fileUrl,
-    // An uploaded file wins over doc_url, so a hand-edited URL must drop it to take effect.
-    doc_media_id: urlChanged ? null : base.doc_media_id,
+    // The uploaded file is the download; doc_url only keeps an older plain link until it's replaced.
+    doc_media_id: contractDocument.mediaId,
+    doc_url: contractDocument.mediaId ? "" : contractDocument.fileUrl,
     sections: clauses.map((clause, i) => ({
       ...base.sections[i],
       title: clause.title,

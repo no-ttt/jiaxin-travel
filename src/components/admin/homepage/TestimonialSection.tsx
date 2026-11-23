@@ -112,11 +112,11 @@ export default function TestimonialSection({
               <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">行程縮圖</span>
               <AdminImageDropzone
                 label="上傳圖示"
-                hint="SVG / PNG"
+                hint="JPG / PNG / WEBP"
                 size="sm"
                 hintPosition="beside"
-                purpose="icon"
-                accept="image/svg+xml,image/png"
+                purpose="image"
+                accept="image/jpeg,image/png,image/webp"
                 mediaId={item.photo_media_id}
                 onChange={(photo_media_id) => updateTestimonial(item._id, { photo_media_id })}
               />

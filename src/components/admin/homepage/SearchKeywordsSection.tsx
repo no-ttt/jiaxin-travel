@@ -5,6 +5,9 @@ import AdminInfoNote from "../ui/AdminInfoNote";
 import AdminToast from "../ui/AdminToast";
 import AdminSectionCard from "../ui/AdminSectionCard";
 
+/** For duplicate checks: 「Japan」「japan」「Ｊａｐａｎ」 and 「香港 澳門」「香港澳門」 count as the same keyword. */
+const normalizeKeyword = (keyword: string) => keyword.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+
 export default function SearchKeywordsSection({
   value: keywords,
   onChange: setKeywords,
@@ -15,14 +18,16 @@ export default function SearchKeywordsSection({
   const [newKeyword, setNewKeyword] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
+  // `id` re-mounts the toast, so trying the same duplicate again shows it again (and restarts its timer).
+  const [warning, setWarning] = useState<{ id: number; message: string } | null>(null);
   const closeWarning = useCallback(() => setWarning(null), []);
 
   const addKeyword = () => {
     const trimmed = newKeyword.trim();
     if (!trimmed) return;
-    if (keywords.includes(trimmed)) {
-      setWarning(`「${trimmed}」已存在！`);
+    const existing = keywords.find((keyword) => normalizeKeyword(keyword) === normalizeKeyword(trimmed));
+    if (existing) {
+      setWarning({ id: Date.now(), message: `「${existing}」已存在！` });
       return;
     }
     setKeywords((prev) => [...prev, trimmed]);
@@ -126,7 +131,9 @@ export default function SearchKeywordsSection({
       <AdminInfoNote>
         每個關鍵字對應前台的一個快速搜尋標籤，使用者點擊後將直接前往該關鍵字的行程搜尋結果頁（無需另外設定連結網址）；拖曳排序可調整顯示順序，關閉後該關鍵字將不再顯示於首頁。
       </AdminInfoNote>
-      {warning && <AdminToast message={warning} variant="warning" onClose={closeWarning} />}
+      {warning && (
+        <AdminToast key={warning.id} message={warning.message} variant="warning" onClose={closeWarning} />
+      )}
     </AdminSectionCard>
   );
 }

@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/api/auth-context";
 import { useCreateTrip } from "@/lib/api/hooks/useTrips";
 import { generateTripCode } from "./trips/form";
 import { ADMIN_NAV_ITEMS } from "./nav-items";
+import { useConfirmLeave } from "./unsaved/UnsavedChangesProvider";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -17,6 +18,7 @@ export default function AdminSidebar() {
   const { user, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const createTrip = useCreateTrip();
+  const confirmLeave = useConfirmLeave();
 
   const handleCreateTrip = () => {
     createTrip.mutate(
@@ -81,7 +83,7 @@ export default function AdminSidebar() {
 
       <button
         type="button"
-        onClick={handleCreateTrip}
+        onClick={() => confirmLeave(handleCreateTrip)}
         disabled={createTrip.isPending}
         className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-[#DBE8FF] py-3.5 text-[15px] font-bold leading-[1.4em] text-[#0053E0] transition hover:bg-[#B4BED1]"
       >
@@ -94,7 +96,7 @@ export default function AdminSidebar() {
       <div className="flex flex-col gap-1">
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => confirmLeave(handleLogout)}
           disabled={isLoggingOut}
           className="flex h-10 cursor-pointer items-center gap-2.5 rounded-[10px] pl-3 text-left text-sm font-medium leading-[1.4em] text-[#535F71] transition hover:bg-[#ECF1FA] disabled:cursor-not-allowed disabled:opacity-60"
         >

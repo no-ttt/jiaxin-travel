@@ -6,6 +6,7 @@ import { useFooter } from "@/lib/api/hooks/useCms";
 import type { VisaDownload, VisaServiceDetail } from "@/lib/api/types/cms";
 import { isBlankHtml } from "@/lib/html";
 import type { ServiceRow } from "./ServiceTable";
+import { colorListMarkers } from "@/lib/listMarkerColor";
 
 type DrawerTab = "documents" | "notes" | "downloads";
 
@@ -144,7 +145,7 @@ export default function ServiceDetailDrawer({
                         >
                           <p className="text-sm font-bold leading-[1.5] text-[#090909]">{doc.title}</p>
                           {!isBlankHtml(doc.body_html) && (
-                            <div className={HTML_CLASS} dangerouslySetInnerHTML={{ __html: doc.body_html }} />
+                            <div className={HTML_CLASS} dangerouslySetInnerHTML={{ __html: colorListMarkers(doc.body_html) }} />
                           )}
                           {doc.downloads.length > 0 && (
                             <div className="flex flex-wrap gap-2.5 pt-2">
@@ -175,7 +176,7 @@ export default function ServiceDetailDrawer({
                           <p className="text-sm font-bold leading-[1.5] text-[#090909]">{doc.title}</p>
                         )}
                         {!isBlankHtml(doc.body_html) && (
-                          <div className={HTML_CLASS} dangerouslySetInnerHTML={{ __html: doc.body_html }} />
+                          <div className={HTML_CLASS} dangerouslySetInnerHTML={{ __html: colorListMarkers(doc.body_html) }} />
                         )}
                       </div>
                     ))}
@@ -186,7 +187,7 @@ export default function ServiceDetailDrawer({
               {activeTab === "downloads" && (
                 <div className="flex flex-col gap-3">
                   <h3 className="font-serif text-lg font-bold text-[#090909] sm:text-xl">
-                    {TAB_LABELS.downloads}
+                    {row.detail.downloads_title || TAB_LABELS.downloads}
                   </h3>
                   <div className="flex flex-col">
                     {row.detail.downloads.map((file, i) => (
@@ -197,8 +198,15 @@ export default function ServiceDetailDrawer({
                         {file.title && (
                           <p className="text-sm font-bold leading-[21px] text-[#090909]">{file.title}</p>
                         )}
-                        {file.description && (
-                          <p className="text-[13px] leading-[21px] text-[#535F71]">{file.description}</p>
+                        {file.description_html ? (
+                          <div
+                            className={HTML_CLASS}
+                            dangerouslySetInnerHTML={{ __html: colorListMarkers(file.description_html) }}
+                          />
+                        ) : (
+                          file.description && (
+                            <p className="text-[13px] leading-[21px] text-[#535F71]">{file.description}</p>
+                          )
                         )}
                         <div className="flex gap-2.5">
                           <DownloadButton file={file} />

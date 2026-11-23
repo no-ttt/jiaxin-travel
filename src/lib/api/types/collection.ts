@@ -63,7 +63,14 @@ export type PublicCollection = {
   items: PublicTripCard[];
 };
 
+/** limit ≤ 48. The collection endpoint also filters by region / departure month / duration and sorts. */
 export type PublicCollectionParams = Partial<{
   page: number;
   limit: number;
+  region_ids: number;
+  departure_months: number;
+  /** 旅遊天數 band: "1-5" | "6-10" | "11-15" | "15+". */
+  duration_band: string;
+  /** "price_asc" | "price_desc"; omitted keeps the default (departure date) order. */
+  sort: string;
 }>;

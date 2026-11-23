@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { ApiError } from "./client";
 import { API_V1_PREFIX, SERVER_API_ORIGIN } from "./config";
 import type {
@@ -8,6 +10,7 @@ import type {
   FraudNoticePage,
   Homepage,
   Navigation,
+  PolicyPage,
   PurchaseFlowPage,
   VisaServices,
 } from "./types/cms";
@@ -33,8 +36,15 @@ async function serverFetch(path: string, init: RequestInit = {}): Promise<Respon
   return fetch(`${SERVER_API_ORIGIN}${API_V1_PREFIX}${path}`, { signal: AbortSignal.timeout(10_000), ...init });
 }
 
-async function cmsFetch<T>(path: string, opts: { tags?: string[] } = {}): Promise<T> {
+/**
+ * One backend call per path per server request. The timeout `signal` opts fetch out of Next's
+ * automatic memoization, so without this the root layout and a page asking for the same document
+ * (e.g. 訂購流程 for the footer and for /pages/purchase-flow) each hit the API.
+ * Keyed by primitives (path + comma-joined tags) because React.cache compares arguments by identity.
+ */
+const cmsFetchOnce = cache(async (path: string, tagList: string): Promise<unknown> => {
   const headers = { accept: "application/json" };
+  const tags = tagList ? tagList.split(",") : [];
   // Local dev: nobody calls /api/revalidate on localhost (the backend only notifies the deployed
   // frontend), so skip the data cache and show admin edits on a normal reload.
   const init: RequestInit =
@@ -42,14 +52,17 @@ async function cmsFetch<T>(path: string, opts: { tags?: string[] } = {}): Promis
       ? { headers, cache: "no-store" }
       : {
           headers,
-          next: { tags: [CMS_TAG, ...(opts.tags ?? [])], revalidate: DEFAULT_REVALIDATE_SECONDS },
+          next: { tags: [CMS_TAG, ...tags], revalidate: DEFAULT_REVALIDATE_SECONDS },
         };
   const res = await serverFetch(path, init);
   if (!res.ok) {
     throw new ApiError(res.status, `API request failed: ${res.status} ${path}`);
   }
-  return (await res.json()) as T;
-}
+  return res.json();
+});
+
+const cmsFetch = <T>(path: string, opts: { tags?: string[] } = {}): Promise<T> =>
+  cmsFetchOnce(path, (opts.tags ?? []).join(",")) as Promise<T>;
 
 export const getNavigation = () => cmsFetch<Navigation>("/public/navigation", { tags: ["navigation"] });
 export const getFooter = () => cmsFetch<Footer>("/public/footer", { tags: ["footer"] });
@@ -63,6 +76,8 @@ const getContentPage = <T>(key: string) =>
 export const getFraudNotice = () => getContentPage<FraudNoticePage>("fraud-notice");
 export const getContract = () => getContentPage<ContractPage>("contract");
 export const getPurchaseFlow = () => getContentPage<PurchaseFlowPage>("purchase-flow");
+export const getCancellationPolicy = () => getContentPage<PolicyPage>("cancellation-policy");
+export const getAnnouncements = () => getContentPage<PolicyPage>("announcements");
 
 export const getPublicTrip = (tripCode: string) =>
   cmsFetch<PublicTripDetail>(`/public/trips/${encodeURIComponent(tripCode)}`, {

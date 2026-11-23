@@ -9,6 +9,13 @@ export function useThemes() {
   return useQuery({ queryKey: ["taxonomy", "themes"], queryFn: taxonomyApi.listThemes });
 }
 
+export function usePremiumSubcategories() {
+  return useQuery({
+    queryKey: ["taxonomy", "premium-subcategories"],
+    queryFn: taxonomyApi.listPremiumSubcategories,
+  });
+}
+
 export function useTripStatusOptions() {
   return useQuery({
     queryKey: ["taxonomy", "trip-statuses"],

@@ -7,7 +7,7 @@ export default function MeianInquirySection() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="flex flex-col items-stretch bg-[#FAFAFA]">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col items-stretch bg-[#FAFAFA]">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}

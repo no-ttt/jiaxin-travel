@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
 export type Testimonial = {
@@ -30,7 +30,7 @@ function StarRating({ rating }: { rating: number }) {
 
 function TestimonialCard({ testimonial }: { testimonial: Testimonial }) {
   return (
-    <div className="flex w-[560px] shrink-0 items-center gap-6 rounded-2xl border border-[#E0E3E8] bg-white p-6 shadow-[0px_8px_24px_0px_rgba(0,35,102,0.08)]">
+    <div className="flex w-[calc(100vw-48px)] max-w-[560px] shrink-0 flex-col items-start gap-4 rounded-2xl border border-[#E0E3E8] bg-white p-5 shadow-[0px_8px_24px_0px_rgba(0,35,102,0.08)] sm:w-[560px] sm:flex-row sm:items-center sm:gap-6 sm:p-6">
       {testimonial.photo ? (
         <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden rounded-2xl">
           <Image src={testimonial.photo} alt="" fill className="object-cover" />
@@ -56,30 +56,53 @@ function TestimonialCard({ testimonial }: { testimonial: Testimonial }) {
 
 export default function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const loop = testimonials.length > 0 ? [...testimonials, ...testimonials] : [];
+  // How many copies of the list are rendered: enough to cover the scroller plus one spare set,
+  // so the auto-scroll can always wrap seamlessly however wide the screen is.
+  const [copies, setCopies] = useState(2);
+  const loop = testimonials.length > 0 ? Array.from({ length: copies }, () => testimonials).flat() : [];
 
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller || testimonials.length === 0) return;
 
+    // Distance from the first card to the first card of the second copy (includes the gap).
+    const setWidth = () => {
+      const first = scroller.children[0] as HTMLElement | undefined;
+      const nextSet = scroller.children[testimonials.length] as HTMLElement | undefined;
+      return first && nextSet ? nextSet.offsetLeft - first.offsetLeft : 0;
+    };
+
+    const fit = () => {
+      const width = setWidth();
+      if (width <= 0) return;
+      setCopies(Math.max(2, Math.ceil(scroller.clientWidth / width) + 1));
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(scroller);
+
     let frame: number;
     const speed = 0.5;
+    // Tracked here because the browser may round scrollLeft, swallowing sub-pixel steps.
+    let position = scroller.scrollLeft;
 
     const step = () => {
-      if (scroller.scrollLeft >= scroller.scrollWidth / 2) {
-        scroller.scrollLeft -= scroller.scrollWidth / 2;
-      } else {
-        scroller.scrollLeft += speed;
-      }
+      const width = setWidth();
+      position += speed;
+      if (width > 0 && position >= width) position -= width;
+      scroller.scrollLeft = position;
       frame = requestAnimationFrame(step);
     };
 
     frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [testimonials.length]);
 
   return (
-    <section className="flex flex-col gap-8 bg-white py-12 pl-4 sm:pl-8 lg:py-24 lg:pl-[120px] xl:pl-[max(120px,calc((100%_-_1200px)/2))]">
+    <section className="flex flex-col gap-8 bg-white py-12 pl-4 sm:pl-8 lg:py-24 lg:pl-[120px]">
       <div className="flex flex-col gap-2">
         <span className="text-[13px] font-bold uppercase tracking-[0.1692em] text-[#0053E0]">
           Client Testimonials

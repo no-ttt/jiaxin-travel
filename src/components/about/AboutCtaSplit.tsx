@@ -33,7 +33,7 @@ export default function AboutCtaSplit() {
       </Link>
 
       <Link
-        href="/custom-trip"
+        href="/custom-group"
         className="relative flex h-[320px] flex-1 flex-col justify-center gap-4 overflow-hidden px-6 py-10 sm:h-[430px] sm:px-[92px]"
         style={{
           background:

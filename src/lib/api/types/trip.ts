@@ -24,6 +24,10 @@ export type TripUpdate = Partial<{
   service_tags: string[] | null;
   service_tags_visible: boolean | null;
   cover_headline: string | null;
+  /** 特色景點: up to 6 plain-text items, 80 chars each (backend strips blanks). */
+  highlights: string[] | null;
+  /** 特色景點 editor HTML (keeps formatting; sanitized by the backend). */
+  highlights_html: string | null;
   duration_days: number | null;
   duration_nights: number | null;
   seo_title: string | null;
@@ -84,10 +88,13 @@ export type DayIn = {
   images?: DayImageIn[];
 };
 
+/** A card inside a 訂購須知 tab. */
+export type NoticeCardIn = { title: string; body_html: string; visible: boolean };
+
 export type NoticeTabIn = {
   title?: string;
-  body_html?: string;
   visible?: boolean;
+  cards?: NoticeCardIn[];
 };
 
 export type FeatureCardImageIn = {
@@ -156,7 +163,7 @@ export type TripDay = {
   images: TripImage[];
 };
 
-export type TripNoticeTab = { title: string; body_html: string; visible: boolean };
+export type TripNoticeTab = { title: string; visible: boolean; cards: NoticeCardIn[] };
 
 /** GET /admin/trips/{id}. Confirmed against the live API. */
 export type TripDetail = {
@@ -171,6 +178,9 @@ export type TripDetail = {
     service_tags: string[];
     service_tags_visible: boolean;
     cover_headline: string;
+    highlights: string[];
+    /** 特色景點 editor HTML; empty on trips saved before it existed (falls back to `highlights`). */
+    highlights_html?: string;
     duration_days: number | null;
     duration_nights: number | null;
   };
@@ -236,6 +246,8 @@ export type PublicTripSearchParams = Partial<{
   keyword: string;
   region_ids: number[];
   theme_ids: number[];
+  /** 精緻璽品子分類 ids (navigation.premium_subcategories). */
+  premium_subcategory_ids: number[];
   zone: TripZone;
   /** "1-5" | "6-10" | "11-15" | "15+" */
   duration_bands: string[];
@@ -260,6 +272,9 @@ export type PublicTripDetail = PublicTripCard & {
   seo: { title: string; description: string; og_image: string | null };
   service_tags: string[];
   cover_headline: string;
+  highlights: string[];
+  /** 特色景點 HTML; empty for trips saved before it existed (falls back to `highlights`). */
+  highlights_html?: string;
   departure_date: string | null;
   deposit_per_person: number | null;
   /** "inquiry" for own trips; external trips link out via external_url. */
@@ -286,5 +301,6 @@ export type PublicTripDetail = PublicTripCard & {
     description: string;
     images: PublicTripImage[];
   }[];
-  notice_tabs?: { title: string; body_html: string }[];
+  /** Visible tabs, each with its visible cards only. */
+  notice_tabs?: { title: string; cards: { title: string; body_html: string }[] }[];
 };

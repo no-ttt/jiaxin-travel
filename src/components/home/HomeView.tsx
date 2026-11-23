@@ -11,7 +11,6 @@ import OurStandards, { type Standard } from "@/components/OurStandards";
 import TestimonialCarousel, { type Testimonial } from "@/components/TestimonialCarousel";
 import Footer from "@/components/Footer";
 import { useHomepage } from "@/lib/api/hooks/useCms";
-import { buildSearchHref } from "@/components/search/searchUrl";
 import type { Homepage, HomepageTripCard, PublicMedia } from "@/lib/api/types/cms";
 import { videoSrc } from "@/lib/api/types/media";
 
@@ -20,11 +19,9 @@ function mediaUrl(media: PublicMedia | null, variant?: "hero" | "card" | "thumb"
   return (variant && media.variants[variant]) || media.url || null;
 }
 
-/** 「查看更多」 target per featured section key. */
+/** 「查看更多」 target per featured section key; per the design only 保證出團 has one. */
 const MORE_HREF: Record<string, string> = {
-  guaranteed: "/guaranteed-departure",
-  premium: buildSearchHref({ zone: "premium" }),
-  theme: buildSearchHref({ zone: "theme_travel" }),
+  guaranteed: "/collections/guaranteed",
 };
 
 function toTour(trip: HomepageTripCard): Tour {
@@ -40,8 +37,15 @@ function toTour(trip: HomepageTripCard): Tour {
 }
 
 /** `initialHomepage` is fetched on the server; null when the API was unreachable there. */
-export default function HomeView({ initialHomepage }: { initialHomepage: Homepage | null }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+export default function HomeView({
+  initialHomepage,
+  initialSidebarOpen = false,
+}: {
+  initialHomepage: Homepage | null;
+  /** The admin 產品分類設定 preview opens with the sidebar showing. */
+  initialSidebarOpen?: boolean;
+}) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(initialSidebarOpen);
   const { data: homepage, isLoading, isError } = useHomepage(initialHomepage ?? undefined);
 
   const banners: BannerSlide[] =

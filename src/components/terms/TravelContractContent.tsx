@@ -1,12 +1,13 @@
 import type { ContractPage } from "@/lib/api/types/cms";
 import { BODY_HTML_CLASS, INTRO_HTML_CLASS } from "./contentHtml";
+import { colorListMarkers } from "@/lib/listMarkerColor";
 
 export default function TravelContractContent({ page }: { page: ContractPage }) {
   return (
     <div className="flex w-full max-w-[1200px] flex-col gap-6">
       <div className="flex flex-col gap-2.5">
         <h2 className="font-serif text-[28px] font-bold text-[#090909] sm:text-4xl">{page.page_title}</h2>
-        <div className={INTRO_HTML_CLASS} dangerouslySetInnerHTML={{ __html: page.intro_html }} />
+        <div className={INTRO_HTML_CLASS} dangerouslySetInnerHTML={{ __html: colorListMarkers(page.intro_html) }} />
       </div>
 
       <div className="flex w-full flex-col gap-9 rounded-[22px] border border-[#E0E3E8] bg-white px-6 py-11 shadow-[0px_10px_28px_0px_rgba(5,20,41,0.05)] sm:px-12">
@@ -28,7 +29,7 @@ export default function TravelContractContent({ page }: { page: ContractPage }) 
           <div key={index} className="flex flex-col gap-3.5">
             <div className="h-px w-full bg-[#E0E3E8]" />
             <h3 className="text-xl font-medium text-[#090909] sm:text-2xl">{section.title}</h3>
-            <div className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: section.body_html }} />
+            <div className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: colorListMarkers(section.body_html) }} />
           </div>
         ))}
       </div>

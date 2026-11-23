@@ -4,31 +4,11 @@ import { useState } from "react";
 import AdminInfoNote from "@/components/admin/ui/AdminInfoNote";
 import { generateId } from "@/components/admin/ui/generateId";
 import RichTextEditor from "./RichTextEditor";
+import RowActionButton from "./RowActionButton";
 import { AddImageTile, TripImagePreview, useImageReorder } from "./TripImageTiles";
 import { moveById, type EditableFeatureCard } from "./content";
 
 type HighlightCard = EditableFeatureCard;
-
-function RowActionButton({
-  label,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#E0E3E8] bg-white px-3 py-2 text-[13px] font-medium leading-[1.45em] text-[#535F71] hover:border-[#0053E0] hover:bg-[#ECF1FA] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#E0E3E8] disabled:hover:bg-white"
-    >
-      {label}
-    </button>
-  );
-}
 
 /** The backend rejects more than 6 highlight cards (TripUpdate.highlights maxItems: 6). */
 const MAX_HIGHLIGHTS = 6;
@@ -161,7 +141,7 @@ export default function HighlightsSection({
         </p>
       </div>
 
-      <AdminInfoNote>前台呈現規則：1 張圖片顯示為單圖；2 張以上自動切換為輪播。圖片註解會顯示於圖片下方。</AdminInfoNote>
+      <AdminInfoNote icon={false}>前台呈現規則：1 張圖片顯示為單圖；2 張以上自動切換為輪播。圖片註解會顯示於圖片下方。</AdminInfoNote>
 
       <div className="flex flex-col gap-4">
         {cards.map((card, index) => {
@@ -197,7 +177,10 @@ export default function HighlightsSection({
                   isDragOver ? "border-[#0053E0]" : "border-[#E0E3E8]"
                 } ${draggingId === card._id ? "opacity-50" : ""}`}
               >
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <div
+                  onDoubleClick={() => toggleExpand(card._id)}
+                  className="flex min-w-0 flex-1 cursor-pointer select-none items-center gap-2.5"
+                >
                   <span className="cursor-grab text-lg leading-none text-[#535F71]">⋮⋮</span>
                   <span className="text-sm font-bold leading-[1.45em] text-[#090909]">特色卡面 {cardNumber}</span>
                   <span className="truncate text-[13px] leading-[1.45em] text-[#090909]">{card.title || "（未命名）"}</span>
@@ -217,13 +200,18 @@ export default function HighlightsSection({
           return (
             <div
               key={card._id}
+              data-card-id={card._id}
               {...dragHandlers}
               className={`flex flex-col gap-[18px] rounded-2xl border bg-white p-[18px] transition ${
                 isDragOver ? "border-[#0053E0]" : "border-[#E0E3E8]"
               } ${draggingId === card._id ? "opacity-50" : ""}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                {/* Double-click the header to collapse (there is no 收合 button). */}
+                <div
+                  onDoubleClick={() => toggleExpand(card._id)}
+                  className="flex min-w-0 flex-1 cursor-pointer select-none items-center gap-2.5"
+                >
                   <span className="cursor-grab text-lg leading-none text-[#535F71]">⋮⋮</span>
                   <span className="text-[15px] font-bold leading-[1.45em] text-[#090909]">
                     特色卡面 {cardNumber}
@@ -235,7 +223,6 @@ export default function HighlightsSection({
                 <div className="flex shrink-0 items-center gap-2">
                   <RowActionButton label="複製" onClick={() => duplicateCard(card._id)} />
                   <RowActionButton label="上移" onClick={() => moveCardUp(card._id)} disabled={index === 0} />
-                  <RowActionButton label="收合" onClick={() => toggleExpand(card._id)} />
                   <RowActionButton label="刪除" onClick={() => removeCard(card._id)} />
                 </div>
               </div>

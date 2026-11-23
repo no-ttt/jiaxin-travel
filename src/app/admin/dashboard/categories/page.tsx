@@ -1,5 +1,8 @@
 "use client";
 
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useUnsavedChangesWarning } from "@/components/admin/unsaved/UnsavedChangesProvider";
+import { usePreviewWriter } from "@/components/admin/preview/draft-store";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -20,6 +23,7 @@ import { taxonomyApi } from "@/lib/api/endpoints/taxonomy";
 import {
   TAXONOMY_KEY,
   useNavCategories,
+  usePremiumSubcategories,
   useRegions,
   useThemes,
 } from "@/lib/api/hooks/useTaxonomy";
@@ -37,6 +41,7 @@ export default function AdminCategoriesPage() {
   const navCategories = useNavCategories();
   const regions = useRegions();
   const themes = useThemes();
+  const premiumSubcategories = usePremiumSubcategories();
   const [toast, setToast] = useState<{ message: string; variant: "success" | "warning" } | null>(
     null
   );
@@ -50,14 +55,19 @@ export default function AdminCategoriesPage() {
   // a save: the page then shows what was actually saved). The serialized key (not object identity)
   // decides "fresh", so a save can set both at once.
   const serverKey =
-    navCategories.data && regions.data && themes.data
-      ? JSON.stringify([navCategories.data, regions.data, themes.data])
+    navCategories.data && regions.data && themes.data && premiumSubcategories.data
+      ? JSON.stringify([navCategories.data, regions.data, themes.data, premiumSubcategories.data])
       : null;
   const [syncedKey, setSyncedKey] = useState<string | null>(null);
   const [base, setBase] = useState<CategoriesDraft | null>(null);
   const [draft, setDraft] = useState<CategoriesDraft | null>(null);
   if (serverKey !== null && serverKey !== syncedKey && !isSaving) {
-    const fresh = toCategoriesDraft(navCategories.data!, regions.data!, themes.data!);
+    const fresh = toCategoriesDraft(
+      navCategories.data!,
+      regions.data!,
+      themes.data!,
+      premiumSubcategories.data!,
+    );
     setSyncedKey(serverKey);
     setBase(fresh);
     setDraft(fresh);
@@ -66,6 +76,8 @@ export default function AdminCategoriesPage() {
 
   const pendingOps = base && draft ? buildSaveOps(base, draft) : [];
   const isDirty = pendingOps.length > 0;
+  useUnsavedChangesWarning(isDirty);
+  const openPreview = usePreviewWriter("categories", draft, (d) => d);
   const isValid = draft !== null && isDraftValid(draft);
 
   const updateField =
@@ -80,30 +92,39 @@ export default function AdminCategoriesPage() {
 
     // Reload straight from the API (fetchQuery throws on failure, unlike reading the stale cache) and
     // show the server copy: whatever failed is simply not there, and the toast says so.
-    let reloadedRegionIds: number[] | null = null;
+    let reloadedIds: { region: number[]; premium: number[] } | null = null;
     try {
-      const [cats, regionRows, themeRows] = await Promise.all([
+      const [cats, regionRows, themeRows, premiumRows] = await Promise.all([
         queryClient.fetchQuery({ queryKey: ["taxonomy", "nav-categories"], queryFn: taxonomyApi.listNavCategories, staleTime: 0 }),
         queryClient.fetchQuery({ queryKey: ["taxonomy", "regions"], queryFn: taxonomyApi.listRegions, staleTime: 0 }),
         queryClient.fetchQuery({ queryKey: ["taxonomy", "themes"], queryFn: taxonomyApi.listThemes, staleTime: 0 }),
+        queryClient.fetchQuery({
+          queryKey: ["taxonomy", "premium-subcategories"],
+          queryFn: taxonomyApi.listPremiumSubcategories,
+          staleTime: 0,
+        }),
       ]);
-      reloadedRegionIds = regionRows.map((region) => region.id);
-      const fresh = toCategoriesDraft(cats, regionRows, themeRows);
-      setSyncedKey(JSON.stringify([cats, regionRows, themeRows]));
+      reloadedIds = {
+        region: regionRows.map((region) => region.id),
+        premium: premiumRows.map((sub) => sub.id),
+      };
+      const fresh = toCategoriesDraft(cats, regionRows, themeRows, premiumRows);
+      setSyncedKey(JSON.stringify([cats, regionRows, themeRows, premiumRows]));
       setBase(fresh);
       setDraft(fresh);
     } catch {
       setReloadFailed(true);
     }
-    const reloaded = reloadedRegionIds !== null;
+    const reloaded = reloadedIds !== null;
     // Other taxonomy lists (trip statuses, badges, the trip editor's options) refresh in the background.
     void queryClient.invalidateQueries({ queryKey: TAXONOMY_KEY });
     setIsSaving(false);
 
-    // A removal that errored but whose region is gone after the reload did go through (only the
+    // A removal that errored but whose row is gone after the reload did go through (only the
     // response was lost), so it counts as saved. The rest were refused: dialog with the API's message.
-    const regionStillThere = (id: number) => reloadedRegionIds === null || reloadedRegionIds.includes(id);
-    const refusedRemovals = failures.filter((f) => f.op.removed && regionStillThere(f.op.removed.id));
+    const stillThere = ({ kind, id }: { kind: "region" | "premium"; id: number }) =>
+      reloadedIds === null || reloadedIds[kind].includes(id);
+    const refusedRemovals = failures.filter((f) => f.op.removed && stillThere(f.op.removed));
     const isDuplicateName = (f: (typeof failures)[number]) =>
       Boolean(f.op.named) && f.error instanceof ApiError && f.error.status === 409;
     const duplicateNames = failures.filter(isDuplicateName);
@@ -134,21 +155,21 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const isLoading = navCategories.isLoading || regions.isLoading || themes.isLoading;
-  const isError = navCategories.isError || regions.isError || themes.isError;
+  const isError = navCategories.isError || regions.isError || themes.isError || premiumSubcategories.isError;
 
   return (
     <div className="flex flex-col gap-7">
       <AdminPageHeader
+        onPreview={openPreview}
         title="產品分類設定"
         description="管理首頁側邊欄大分類、各分類的子選單開關，以及「國外團體」地區子分類與「主題旅遊」子類別的顯示名稱。"
         onSave={handleSave}
         saveDisabled={!isDirty || !isValid || isSaving || reloadFailed}
       />
 
-      {isLoading ? (
-        <p className="text-sm text-[#535F71]">載入中…</p>
-      ) : isError || !draft ? (
+      {!draft && !isError ? (
+        <AdminLoading />
+      ) : !draft ? (
         <p className="text-sm text-red-600">產品分類資料載入失敗，請重新整理頁面</p>
       ) : (
         <>
@@ -162,7 +183,10 @@ export default function AdminCategoriesPage() {
           )}
           <SidebarCategoriesSection value={draft.categories} onChange={updateField("categories")} />
           <RegionSubcategoriesSection value={draft.regions} onChange={updateField("regions")} />
-          <LuxurySubcategoriesSection />
+          <LuxurySubcategoriesSection
+            value={draft.premiumSubcategories}
+            onChange={updateField("premiumSubcategories")}
+          />
           <ThemeSubcategoriesSection value={draft.themes} onChange={updateField("themes")} />
         </>
       )}

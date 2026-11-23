@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { syncListMarkerColors } from "@/lib/listMarkerColor";
 
 type RichTextEditorProps = {
   value: string;
@@ -162,6 +163,8 @@ function applyPendingFontSize(editor: HTMLElement, fontSize: string): HTMLSpanEl
  * browsers emit a <div> per line and <font color|size> for the color/size tools.
  */
 function toSavedHtml(editor: HTMLElement, pendingFontSize: string): string {
+  // Runs on every change, so bullets in the editor follow their text's color right away.
+  syncListMarkerColors(editor);
   const clone = editor.cloneNode(true) as HTMLElement;
   clone.querySelectorAll("div").forEach((div) => {
     const p = document.createElement("p");
@@ -326,6 +329,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
   useEffect(() => {
     // Until the author puts a caret in, show the format the content starts with.
     const editor = editorRef.current;
+    if (editor) syncListMarkerColors(editor);
     const initial = editor && readInitialToolbarState(editor);
     if (initial) {
       setActiveFontSize(initial.fontSize);
@@ -421,7 +425,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
 
   return (
     <div className="flex flex-col rounded-lg border border-[#E0E3E8] bg-white">
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-[#E0E3E8] bg-[#FAFAFA] p-2">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-t-[7px] border-b border-[#E0E3E8] bg-[#FAFAFA] p-2">
         <div className="flex items-center gap-1.5">
           <ToolbarDropdown
             options={FONT_SIZES}

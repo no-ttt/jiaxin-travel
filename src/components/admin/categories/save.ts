@@ -4,14 +4,14 @@ import type { CategoriesDraft, CategoryDraft } from "./data";
 
 /**
  * One API request produced by diffing the draft against the last server copy. After a save the
- * page reloads and shows the server copy, so nothing is reapplied. A region removal carries its id
- * and label: the API may refuse it (still tagged on trips), shown in the "無法刪除" dialog. A region
- * create/rename carries `named`: the API refuses a name another region already has (409), shown
- * in the "名稱已存在" dialog.
+ * page reloads and shows the server copy, so nothing is reapplied. A region / 精緻璽品子分類 removal
+ * carries its kind, id and label: the API may refuse it (still tagged on trips), shown in the
+ * "無法刪除" dialog. A create/rename carries `named`: the API refuses a name another row already has
+ * (409), shown in the "名稱已存在" dialog.
  */
 export type SaveOp = {
   run: () => Promise<unknown>;
-  removed?: { id: number; label: string };
+  removed?: { kind: "region" | "premium"; id: number; label: string };
   named?: { label: string };
 };
 
@@ -61,7 +61,38 @@ export function buildSaveOps(base: CategoriesDraft, draft: CategoriesDraft): Sav
   for (const original of base.regions) {
     const id = original.id;
     if (id != null && !draft.regions.some((r) => r.id === id)) {
-      ops.push({ run: () => taxonomyApi.deleteRegion(id), removed: { id, label: `地區「${original.name}」` } });
+      ops.push({
+        run: () => taxonomyApi.deleteRegion(id),
+        removed: { kind: "region", id, label: `地區「${original.name}」` },
+      });
+    }
+  }
+
+  for (const sub of draft.premiumSubcategories) {
+    const payload = { name: sub.name.trim(), position: sub.position, visible: sub.visible };
+    if (sub.id == null) {
+      ops.push({
+        run: () => taxonomyApi.createPremiumSubcategory(payload),
+        named: { label: `精緻璽品子分類「${payload.name}」` },
+      });
+      continue;
+    }
+    const id = sub.id;
+    const original = base.premiumSubcategories.find((s) => s.id === id);
+    if (original && (changed(sub.name, original.name) || original.visible !== sub.visible)) {
+      ops.push({
+        run: () => taxonomyApi.updatePremiumSubcategory(id, payload),
+        named: { label: `精緻璽品子分類「${original.name}」` },
+      });
+    }
+  }
+  for (const original of base.premiumSubcategories) {
+    const id = original.id;
+    if (id != null && !draft.premiumSubcategories.some((s) => s.id === id)) {
+      ops.push({
+        run: () => taxonomyApi.deletePremiumSubcategory(id),
+        removed: { kind: "premium", id, label: `精緻璽品子分類「${original.name}」` },
+      });
     }
   }
 

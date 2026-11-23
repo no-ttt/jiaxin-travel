@@ -4,6 +4,7 @@ import type {
   NameIn,
   NavCategory,
   NavCategoryUpdate,
+  PremiumSubcategory,
   Region,
   TaxonomyOption,
   Theme,
@@ -28,6 +29,19 @@ export const taxonomyApi = {
     apiFetch<Region>(`/admin/taxonomy/regions/${regionId}`, { method: "PATCH", body: payload }),
   deleteRegion: (regionId: number) =>
     apiFetch<void>(`/admin/taxonomy/regions/${regionId}`, { method: "DELETE" }),
+
+  listPremiumSubcategories: () =>
+    apiFetch<PremiumSubcategory[] | ItemsResponse<PremiumSubcategory>>(
+      "/admin/taxonomy/premium-subcategories",
+    ).then(toItems),
+  createPremiumSubcategory: (payload: ThemeIn) =>
+    apiFetch<{ id: number }>("/admin/taxonomy/premium-subcategories", { method: "POST", body: payload }),
+  /** The body schema is ThemeIn (name required), so callers send the full row, not a diff. */
+  updatePremiumSubcategory: (subId: number, payload: ThemeIn) =>
+    apiFetch<void>(`/admin/taxonomy/premium-subcategories/${subId}`, { method: "PATCH", body: payload }),
+  /** Refused (409) while trips are still tagged with the subcategory. */
+  deletePremiumSubcategory: (subId: number) =>
+    apiFetch<void>(`/admin/taxonomy/premium-subcategories/${subId}`, { method: "DELETE" }),
 
   listThemes: () =>
     apiFetch<Theme[] | ItemsResponse<Theme>>("/admin/taxonomy/themes").then(toItems),

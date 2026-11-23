@@ -12,24 +12,20 @@ const DAY_OFFSET_OPTIONS = [
   { value: 1, label: "+1" },
 ];
 
-const COLUMN_WIDTHS = {
-  date: "w-[150px]",
-  flight: "w-[180px]",
-  time: "w-[90px]",
-  city: "w-[110px]",
-  overnight: "w-[80px]",
-  arriveCity: "w-[150px]",
-};
+/**
+ * Shared by the header and every row. Proportional columns (Figma widths 120/180/90/110/90/80/150)
+ * that shrink with the page, so the table never needs a horizontal scrollbar.
+ */
+const GRID_COLUMNS =
+  "grid grid-cols-[minmax(132px,120fr)_minmax(0,180fr)_minmax(0,90fr)_minmax(0,110fr)_minmax(0,90fr)_minmax(76px,80fr)_minmax(0,150fr)_40px] items-center gap-2 px-3";
 
 function CellInput({
   value,
   onChange,
-  className,
   placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
-  className: string;
   placeholder?: string;
 }) {
   return (
@@ -38,7 +34,7 @@ function CellInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`h-9 rounded-lg border border-transparent bg-transparent px-2 text-sm font-medium leading-[1.45em] text-[#090909] outline-none placeholder:text-[#B4BED1] hover:border-[#E0E3E8] focus:border-[#0053E0] focus:bg-white ${className}`}
+      className={`h-9 w-full min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-sm font-medium leading-[1.45em] text-[#090909] outline-none placeholder:text-[#B4BED1] hover:border-[#E0E3E8] focus:border-[#0053E0] focus:bg-white`}
     />
   );
 }
@@ -106,31 +102,31 @@ export default function FlightSection({
         />
       </div>
 
-      <div className="w-full overflow-x-auto rounded-[10px] border border-[#E0E3E8]">
-        <div className="min-w-[980px]">
-          <div className="flex items-center gap-2 bg-[#F6F6F6] px-3 py-0">
-            <span className={`flex h-11 items-center text-[13px] font-bold leading-[1.45em] text-[#535F71] ${COLUMN_WIDTHS.date}`}>
+      <div className="w-full overflow-hidden rounded-[10px] border border-[#E0E3E8]">
+        <div>
+          <div className={`${GRID_COLUMNS} bg-[#F6F6F6]`}>
+            <span className="flex h-11 items-center truncate text-[13px] font-bold leading-[1.45em] text-[#535F71]">
               航班日期
             </span>
-            <span className={`flex h-11 items-center text-[13px] font-bold leading-[1.45em] text-[#535F71] ${COLUMN_WIDTHS.flight}`}>
+            <span className="flex h-11 items-center truncate text-[13px] font-bold leading-[1.45em] text-[#535F71]">
               航空公司及航班
             </span>
-            <span className={`flex h-11 items-center text-[13px] font-bold leading-[1.45em] text-[#535F71] ${COLUMN_WIDTHS.time}`}>
+            <span className="flex h-11 items-center truncate text-[13px] font-bold leading-[1.45em] text-[#535F71]">
               起飛
             </span>
-            <span className={`flex h-11 items-center text-[13px] font-bold leading-[1.45em] text-[#535F71] ${COLUMN_WIDTHS.city}`}>
+            <span className="flex h-11 items-center truncate text-[13px] font-bold leading-[1.45em] text-[#535F71]">
               起飛城市
             </span>
-            <span className={`flex h-11 items-center text-[13px] font-bold leading-[1.45em] text-[#535F71] ${COLUMN_WIDTHS.time}`}>
+            <span className="flex h-11 items-center truncate text-[13px] font-bold leading-[1.45em] text-[#535F71]">
               抵達
             </span>
-            <span className={`flex h-11 items-center text-[13px] font-bold leading-[1.45em] text-[#535F71] ${COLUMN_WIDTHS.overnight}`}>
+            <span className="flex h-11 items-center truncate text-[13px] font-bold leading-[1.45em] text-[#535F71]">
               跨日
             </span>
-            <span className={`flex h-11 items-center text-[13px] font-bold leading-[1.45em] text-[#535F71] ${COLUMN_WIDTHS.arriveCity}`}>
+            <span className="flex h-11 items-center truncate text-[13px] font-bold leading-[1.45em] text-[#535F71]">
               抵達城市
             </span>
-            <span className="flex h-11 flex-1 items-center justify-center text-[13px] font-bold leading-[1.45em] text-[#535F71]">
+            <span className="flex h-11 items-center justify-center text-[13px] font-bold leading-[1.45em] text-[#535F71]">
               刪除
             </span>
           </div>
@@ -142,8 +138,8 @@ export default function FlightSection({
           )}
 
           {flights.map((flight) => (
-            <div key={flight._id} className="flex items-center gap-2 border-t border-[#E0E3E8] px-3 py-2">
-              <div className={COLUMN_WIDTHS.date}>
+            <div key={flight._id} className={`${GRID_COLUMNS} border-t border-[#E0E3E8] py-2`}>
+              <div className="min-w-0">
                 <AdminDateField
                   value={flight.flight_date}
                   onChange={(v) => updateFlight(flight._id, { flight_date: v })}
@@ -154,27 +150,23 @@ export default function FlightSection({
                 value={flight.airline_flight}
                 onChange={(v) => updateFlight(flight._id, { airline_flight: v })}
                 placeholder="長榮航空 BR087"
-                className={COLUMN_WIDTHS.flight}
               />
               <CellInput
                 value={flight.depart_time}
                 onChange={(v) => updateFlight(flight._id, { depart_time: v })}
                 placeholder="23:05"
-                className={COLUMN_WIDTHS.time}
               />
               <CellInput
                 value={flight.depart_city}
                 onChange={(v) => updateFlight(flight._id, { depart_city: v })}
                 placeholder="桃園 TPE"
-                className={COLUMN_WIDTHS.city}
               />
               <CellInput
                 value={flight.arrive_time}
                 onChange={(v) => updateFlight(flight._id, { arrive_time: v })}
                 placeholder="08:00"
-                className={COLUMN_WIDTHS.time}
               />
-              <div className={`shrink-0 ${COLUMN_WIDTHS.overnight}`}>
+              <div className="min-w-0">
                 <AdminSelect
                   size="compact"
                   ariaLabel="跨日"
@@ -187,22 +179,16 @@ export default function FlightSection({
                 value={flight.arrive_city}
                 onChange={(v) => updateFlight(flight._id, { arrive_city: v })}
                 placeholder="巴黎 CDG"
-                className={COLUMN_WIDTHS.arriveCity}
               />
-              <div className="flex flex-1 items-center justify-center">
+              <div className="flex items-center justify-center">
                 <button
                   type="button"
                   onClick={() => removeFlight(flight._id)}
                   aria-label="刪除航班"
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#C71A1A] hover:bg-[#FDEDED]"
+                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[#535F71] hover:bg-[#FDEDED] hover:text-[#C71A1A]"
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                    <path
-                      d="M1 1L13 13M13 1L1 13"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
+                    <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </button>
               </div>

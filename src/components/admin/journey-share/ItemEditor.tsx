@@ -4,10 +4,17 @@ import { useState, type DragEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminSpinner from "../ui/AdminSpinner";
 import AdminTextInput from "../ui/AdminTextInput";
+import AdminSelect from "../trips/AdminSelect";
 import PhotoCard, { MediaThumb } from "./PhotoCard";
 import { createJourneyMedia, type CardPatch, type JourneyCard, type JourneyMedia } from "./data";
 import { mediaKey, useMedia } from "@/lib/api/hooks/useMedia";
 import { uploadMedia } from "@/lib/api/upload";
+
+/** 1–5 stars; stored as the star string the frontend shows (API field `rating_text`, e.g. "★★★★★"). */
+const RATING_OPTIONS = [5, 4, 3, 2, 1].map((stars) => ({
+  text: "★".repeat(stars),
+  label: `${"★".repeat(stars)}（${stars}）`,
+}));
 
 const MEDIA_ACCEPT = "image/jpeg,image/png,video/mp4,video/quicktime";
 
@@ -130,12 +137,19 @@ export default function ItemEditor({
         onChange={(review) => onChange({ review })}
       />
 
-      <AdminTextInput
-        label="評分（顯示星等文字）"
-        value={item.rating}
-        placeholder="★★★★★"
-        onChange={(rating) => onChange({ rating })}
-      />
+      <div className="flex flex-col gap-[7px]">
+        <span className="text-sm font-bold leading-[1.45em] text-[#535F71]">評分</span>
+        <AdminSelect
+          size="field"
+          ariaLabel="評分"
+          options={RATING_OPTIONS.map((option) => option.label)}
+          value={RATING_OPTIONS.find((option) => option.text === item.rating)?.label ?? item.rating}
+          onChange={(label) => {
+            const option = RATING_OPTIONS.find((o) => o.label === label);
+            if (option) onChange({ rating: option.text });
+          }}
+        />
+      </div>
 
       <div className="h-px w-full bg-[#E0E3E8]" />
 

@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useEffect, useState } from "react";
+import { useAdminJourneyAlbum } from "@/lib/api/hooks/useJourneys";
+import type { Album } from "@/lib/api/types/journey";
 import AdminSectionCard from "../ui/AdminSectionCard";
 import ItemEditor from "./ItemEditor";
 import TabManager from "./TabManager";
@@ -9,13 +12,23 @@ import { createJourneyCard, type CardPatch, type JourneyCard } from "./data";
 export default function JourneyCardsSection({
   items,
   onItemsChange,
+  onAlbumLoaded,
 }: {
   items: JourneyCard[];
+  /** Called when the open tab's album has been fetched. */
+  onAlbumLoaded: (journeyId: string, album: Album) => void;
   /** Functional, so uploads finishing later append to the latest draft. */
   onItemsChange: (updater: (items: JourneyCard[]) => JourneyCard[]) => void;
 }) {
   const [activeKey, setActiveKey] = useState(items[0]?.key ?? "");
   const activeItem = items.find((item) => item.key === activeKey) ?? items[0];
+
+  // Only the open tab's album is fetched; switching back reuses the cached copy.
+  const albumQuery = useAdminJourneyAlbum(activeItem && !activeItem.albumLoaded ? activeItem.id : null);
+  const loadedAlbum = albumQuery.data;
+  useEffect(() => {
+    if (loadedAlbum) onAlbumLoaded(loadedAlbum.journeyId, loadedAlbum.album);
+  }, [loadedAlbum, onAlbumLoaded]);
 
   const updateItem = (key: string, patch: CardPatch) => {
     onItemsChange((prev) =>
@@ -27,7 +40,8 @@ export default function JourneyCardsSection({
 
   const addItem = () => {
     const newItem = createJourneyCard();
-    onItemsChange((prev) => [...prev, newItem]);
+    // Newest first: the list order is the saved position, so it also leads on the frontend.
+    onItemsChange((prev) => [newItem, ...prev]);
     setActiveKey(newItem.key);
   };
 
@@ -52,7 +66,13 @@ export default function JourneyCardsSection({
         onAdd={addItem}
       />
 
-      {activeItem && (
+      {activeItem && !activeItem.albumLoaded ? (
+        albumQuery.isError ? (
+          <p className="text-sm text-red-600">旅程相簿載入失敗，請重新整理頁面</p>
+        ) : (
+          <AdminLoading />
+        )
+      ) : activeItem && (
         <ItemEditor
           key={activeItem.key}
           item={activeItem}

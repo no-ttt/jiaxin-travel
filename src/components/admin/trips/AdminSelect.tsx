@@ -73,7 +73,7 @@ export default function AdminSelect({
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`flex w-full cursor-pointer items-center justify-between border text-left outline-none focus:border-[#0053E0] ${triggerClass}`}
+        className={`flex w-full cursor-pointer items-center justify-between border text-left outline-none ${triggerClass}`}
       >
         <span className="truncate whitespace-nowrap text-sm font-medium leading-[1.45em] text-[#090909]">
           {value}

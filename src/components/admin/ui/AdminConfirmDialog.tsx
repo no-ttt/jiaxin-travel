@@ -26,7 +26,7 @@ export default function AdminConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-confirm-title"
-        className="flex w-full max-w-[360px] flex-col gap-4 rounded-2xl bg-white p-6"
+        className="flex w-full max-w-[400px] flex-col gap-4 rounded-2xl bg-white p-6"
       >
         <div className="flex flex-col gap-1.5">
           <h2 id="admin-confirm-title" className="text-base font-bold leading-[1.45em] text-[#090909]">

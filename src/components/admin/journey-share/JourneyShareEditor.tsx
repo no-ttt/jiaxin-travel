@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useUnsavedChangesWarning } from "@/components/admin/unsaved/UnsavedChangesProvider";
+import { usePreviewWriter } from "@/components/admin/preview/draft-store";
+import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPageHeader from "../AdminPageHeader";
 import AdminToast from "../ui/AdminToast";
 import JourneyCardsSection from "./JourneyCardsSection";
-import { isDraftValid, toJourneyCards, type JourneyCard } from "./data";
+import { isDraftValid, toJourneyCards, withAlbum, type JourneyCard } from "./data";
 import { buildSaveOps, runSaveOps } from "./save";
 import { ApiError } from "@/lib/api/client";
+import type { Album } from "@/lib/api/types/journey";
 import {
+  ADMIN_JOURNEY_ALBUM_KEY,
   JOURNEY_EDITOR_KEY,
   fetchJourneyEditorData,
   useJourneyEditorData,
@@ -24,7 +29,7 @@ function errorMessage(err: unknown): string {
 
 export default function JourneyShareEditor() {
   const queryClient = useQueryClient();
-  const { data, isLoading, isError } = useJourneyEditorData();
+  const { data, isError } = useJourneyEditorData();
   const [toast, setToast] = useState<{ message: string; variant: "success" | "warning" } | null>(
     null
   );
@@ -46,7 +51,20 @@ export default function JourneyShareEditor() {
 
   const pendingOps = base && draft ? buildSaveOps(base, draft) : [];
   const isDirty = pendingOps.length > 0;
+  useUnsavedChangesWarning(isDirty);
+  const openPreview = usePreviewWriter("journeys", draft, (d) => d);
   const isValid = draft !== null && isDraftValid(draft);
+
+  // A tab's album arrived: fill that journey in both copies so it isn't seen as an edit.
+  const handleAlbumLoaded = useCallback((journeyId: string, album: Album) => {
+    // Returns the same array when nothing to fill, so a repeat call doesn't re-render.
+    const fill = (cards: JourneyCard[] | null) =>
+      cards?.some((card) => card.id === journeyId && !card.albumLoaded)
+        ? cards.map((card) => (card.id === journeyId && !card.albumLoaded ? withAlbum(card, album) : card))
+        : cards;
+    setBase(fill);
+    setDraft(fill);
+  }, []);
 
   const handleSave = async () => {
     if (!isDirty || !isValid) return;
@@ -54,6 +72,8 @@ export default function JourneyShareEditor() {
     const failures = await runSaveOps(pendingOps);
 
     let reloaded = false;
+    // Saved albums may have changed: drop cached copies so reopened tabs fetch them again.
+    queryClient.removeQueries({ queryKey: ADMIN_JOURNEY_ALBUM_KEY });
     try {
       const rows = await queryClient.fetchQuery({
         queryKey: JOURNEY_EDITOR_KEY,
@@ -85,15 +105,16 @@ export default function JourneyShareEditor() {
   return (
     <div className="flex w-full flex-col gap-7">
       <AdminPageHeader
+        onPreview={openPreview}
         title="旅程分享"
         description="管理「最近的旅程」卡片內容，並維護每個旅程點擊後開啟的相簿相片與說明文字。"
         onSave={handleSave}
         saveDisabled={!isDirty || !isValid || isSaving || reloadFailed}
       />
 
-      {isLoading ? (
-        <p className="text-sm text-[#535F71]">載入中…</p>
-      ) : isError || !draft ? (
+      {!draft && !isError ? (
+        <AdminLoading />
+      ) : !draft ? (
         <p className="text-sm text-red-600">旅程分享資料載入失敗，請重新整理頁面</p>
       ) : (
         <>
@@ -104,6 +125,7 @@ export default function JourneyShareEditor() {
           )}
           <JourneyCardsSection
             items={draft}
+            onAlbumLoaded={handleAlbumLoaded}
             onItemsChange={(updater) => setDraft((prev) => (prev ? updater(prev) : prev))}
           />
         </>

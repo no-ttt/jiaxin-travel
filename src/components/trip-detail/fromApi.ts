@@ -55,7 +55,7 @@ function toDays(api: PublicTripDetail): DayPlan[] {
 
 /**
  * Maps GET /public/trips/{code} onto the detail page's view model. Sections the API has no
- * data for yet (highlights list, more features, specs, spec gallery, built-in reminders)
+ * data for yet (more features, specs, spec gallery, built-in reminders)
  * keep the mock content, as agreed until the backend adds those fields.
  */
 export function toTripDetail(api: PublicTripDetail): TripDetail {
@@ -71,6 +71,8 @@ export function toTripDetail(api: PublicTripDetail): TripDetail {
     durationDays: api.duration_days ?? 0,
     departureCity: api.image_summary?.split("出發")[0] || mock.departureCity,
     tags: api.service_tags,
+    highlights: api.highlights ?? [],
+    highlightsHtml: api.highlights_html ?? "",
     startDate: slashDate(api.departure_date),
     deposit: api.deposit_per_person != null ? api.deposit_per_person.toLocaleString() : "—",
     guaranteedDeparture: api.status === "保證出團",
@@ -92,7 +94,10 @@ export function toTripDetail(api: PublicTripDetail): TripDetail {
     specs: [],
     specGalleryImages: [],
     days: toDays(api),
-    noticeTabs: (api.notice_tabs ?? []).map((tab) => ({ title: tab.title, bodyHtml: tab.body_html })),
+    noticeTabs: (api.notice_tabs ?? []).map((tab) => ({
+      title: tab.title,
+      cards: (tab.cards ?? []).map((card) => ({ title: card.title, bodyHtml: card.body_html })),
+    })),
     externalUrl: api.trip_type === "external" ? api.external_url : null,
   };
 }

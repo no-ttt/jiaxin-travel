@@ -1,5 +1,8 @@
 "use client";
 
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useUnsavedChangesWarning } from "@/components/admin/unsaved/UnsavedChangesProvider";
+import { usePreviewWriter } from "@/components/admin/preview/draft-store";
 import { useState } from "react";
 import AdminPageHeader from "../AdminPageHeader";
 import AdminToast from "../ui/AdminToast";
@@ -22,7 +25,7 @@ function errorMessage(err: unknown): string {
 }
 
 export default function ContractEditor() {
-  const { data: doc, isLoading, isError } = useCmsDocument<ContractPage>(CMS_KEY);
+  const { data: doc, isError } = useCmsDocument<ContractPage>(CMS_KEY);
   const putDocument = usePutCmsDocument<ContractPage>(CMS_KEY);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "warning" } | null>(
     null
@@ -40,6 +43,8 @@ export default function ContractEditor() {
     draft !== null &&
     syncedData !== null &&
     !isSameContract(fromEditableContract(draft, syncedData), syncedData);
+  useUnsavedChangesWarning(isDirty);
+  const openPreview = usePreviewWriter("contract", draft, (d) => fromEditableContract(d, syncedData!));
 
   const updateSection =
     <K extends "pageIntro" | "contractDocument">(key: K) =>
@@ -57,15 +62,16 @@ export default function ContractEditor() {
   return (
     <div className="flex w-full flex-col gap-7">
       <AdminPageHeader
+        onPreview={openPreview}
         title="旅遊契約書"
         description="編輯此頁面內容，包含契約書資訊、重要條款與相關連結。"
         onSave={handleSave}
         saveDisabled={!isDirty || putDocument.isPending}
       />
 
-      {isLoading ? (
-        <p className="text-sm text-[#535F71]">載入中…</p>
-      ) : isError || !draft ? (
+      {!draft && !isError ? (
+        <AdminLoading />
+      ) : !draft ? (
         <p className="text-sm text-red-600">旅遊契約書資料載入失敗，請重新整理頁面</p>
       ) : (
         <>

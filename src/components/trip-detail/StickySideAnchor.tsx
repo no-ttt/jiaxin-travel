@@ -136,7 +136,9 @@ function AnchorButton({
 }) {
   return (
     <div className="group relative flex justify-end">
+      {/* Visual hover tooltip only; the button itself carries the name for screen readers. */}
       <span
+        aria-hidden="true"
         className={`pointer-events-none absolute right-full top-1/2 z-20 -mr-px flex h-[50px] -translate-y-1/2 items-center whitespace-nowrap rounded-l-[10px] bg-[#086BD1] px-4 text-[13px] font-medium text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100`}
       >
         {label}
@@ -144,6 +146,7 @@ function AnchorButton({
       <button
         type="button"
         onClick={onClick}
+        aria-label={label === "TOP" ? "回到頂部" : label}
         className={`relative z-10 flex h-[50px] w-14 shrink-0 cursor-pointer items-center justify-center text-[#535F71] transition-colors group-hover:rounded-none group-hover:bg-[#0053E0] group-hover:text-white ${roundedClass}`}
       >
         <Icon className="h-5 w-5" />

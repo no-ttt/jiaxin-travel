@@ -2,6 +2,7 @@ import type { PurchaseFlowPage } from "@/lib/api/types/cms";
 import { isBlankHtml } from "@/lib/html";
 import { BODY_HTML_CLASS } from "./contentHtml";
 import CopyAccountButton from "./CopyAccountButton";
+import { colorListMarkers } from "@/lib/listMarkerColor";
 
 export default function BookingProcessContent({ page }: { page: PurchaseFlowPage }) {
   // The public API already drops hidden steps; empty ones are skipped too (as the admin note says).
@@ -22,12 +23,12 @@ export default function BookingProcessContent({ page }: { page: PurchaseFlowPage
           <div key={index} className="flex flex-col gap-3.5">
             {index > 0 && <div className="-mt-3.5 mb-3.5 h-px w-full bg-[#E0E3E8]" />}
             <h3 className="text-xl font-medium text-[#090909] sm:text-2xl">{step.title}</h3>
-            <div className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: step.body_html }} />
+            <div className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: colorListMarkers(step.body_html) }} />
           </div>
         ))}
 
         {payment.visible && (
-          // Anchor for the footer's 匯款資訊 link (/terms#payment-info); scroll-mt clears the sticky header.
+          // Anchor for the footer's 匯款資訊 link (/pages/payment-info); scroll-mt clears the sticky header.
           <div
             id="payment-info"
             className="flex scroll-mt-28 flex-col gap-4 rounded-[20px] bg-[#EDF5FF]/60 px-5 py-5 sm:px-6"
@@ -55,7 +56,7 @@ export default function BookingProcessContent({ page }: { page: PurchaseFlowPage
             {!isBlankHtml(payment.note_html) && (
               <div
                 className="flex flex-col gap-1 text-[13px] leading-[1.65] text-[#535F71] [&_a]:text-[#0053E0] [&_a]:underline"
-                dangerouslySetInnerHTML={{ __html: payment.note_html }}
+                dangerouslySetInnerHTML={{ __html: colorListMarkers(payment.note_html) }}
               />
             )}
           </div>
@@ -69,7 +70,7 @@ export default function BookingProcessContent({ page }: { page: PurchaseFlowPage
               </span>
               <h3 className="text-2xl font-medium text-[#090909]">溫馨提醒</h3>
             </div>
-            <div className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: page.reminder_html }} />
+            <div className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: colorListMarkers(page.reminder_html) }} />
           </div>
         )}
       </div>

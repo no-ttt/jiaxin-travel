@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Spinner from "@/components/ui/Spinner";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
@@ -90,7 +91,7 @@ export default function ThemeCollectionView({
                     className="flex h-11 min-w-[132px] cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl px-[18px] text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
                     style={{ backgroundColor: collection.button_color ?? DEFAULT_BUTTON_COLOR }}
                   >
-                    {isLoadingMore ? "載入中…" : "查看更多行程"}
+                    {isLoadingMore ? <Spinner /> : "查看更多行程"}
                     {!isLoadingMore && <Image src="/images/more-arrow-down-icon.svg" alt="" width={14} height={14} />}
                   </button>
                   {loadMoreFailed && <p className="text-sm text-[#F97066]">載入失敗，請再試一次</p>}

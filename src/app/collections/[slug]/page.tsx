@@ -9,7 +9,7 @@ import { getNavigation, getPublicCollection } from "@/lib/api/server";
 const loadCollection = cache(async (slug: string) => {
   try {
     const collection = await getPublicCollection(slug);
-    // Only theme collections live under /theme (保證出團／精緻臻品 have their own pages).
+    // Only theme collections render here; 保證出團／美安 have their own static routes under /collections.
     return { collection: collection.kind === "theme" ? collection : null, failed: false };
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return { collection: null, failed: false };
@@ -18,9 +18,9 @@ const loadCollection = cache(async (slug: string) => {
 });
 
 // The route segment is the collection slug, e.g. theme-1 (hidden themes return 404).
-const slugOf = async (params: PageProps<"/theme/[slug]">["params"]) => decodeURIComponent((await params).slug);
+const slugOf = async (params: PageProps<"/collections/[slug]">["params"]) => decodeURIComponent((await params).slug);
 
-export async function generateMetadata({ params }: PageProps<"/theme/[slug]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/collections/[slug]">): Promise<Metadata> {
   const { collection } = await loadCollection(await slugOf(params));
   if (!collection) return { title: "找不到主題｜嘉新旅遊" };
   const title = `${collection.title}｜嘉新旅遊`;
@@ -36,7 +36,7 @@ async function themeNameOf(slug: string): Promise<string | null> {
   return navigation?.themes.find((theme) => theme.id === themeId)?.name ?? null;
 }
 
-export default async function ThemeCollectionPage({ params }: PageProps<"/theme/[slug]">) {
+export default async function ThemeCollectionPage({ params }: PageProps<"/collections/[slug]">) {
   const slug = await slugOf(params);
   const [{ collection, failed }, themeName] = await Promise.all([loadCollection(slug), themeNameOf(slug)]);
   if (!collection && !failed) notFound();

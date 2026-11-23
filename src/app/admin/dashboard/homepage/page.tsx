@@ -1,5 +1,8 @@
 "use client";
 
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useUnsavedChangesWarning } from "@/components/admin/unsaved/UnsavedChangesProvider";
+import { usePreviewWriter } from "@/components/admin/preview/draft-store";
 import { useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminToast from "@/components/admin/ui/AdminToast";
@@ -30,7 +33,7 @@ function errorMessage(err: unknown): string {
 }
 
 export default function AdminHomepagePage() {
-  const { data: doc, isLoading, isError } = useCmsDocument<HomepageDoc>(CMS_KEY);
+  const { data: doc, isError } = useCmsDocument<HomepageDoc>(CMS_KEY);
   const putDocument = usePutCmsDocument<HomepageDoc>(CMS_KEY);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "warning" } | null>(
     null
@@ -48,6 +51,8 @@ export default function AdminHomepagePage() {
     draft !== null &&
     syncedData !== null &&
     !isSameHomepage(fromEditableHomepage(draft), syncedData);
+  useUnsavedChangesWarning(isDirty);
+  const openPreview = usePreviewWriter("homepage", draft, (d) => fromEditableHomepage(d));
 
   const updateField =
     <K extends keyof EditableHomepage>(key: K) =>
@@ -65,15 +70,16 @@ export default function AdminHomepagePage() {
   return (
     <div className="flex flex-col gap-7">
       <AdminPageHeader
+        onPreview={openPreview}
         title="官網首頁"
         description="編輯首頁內容，包含橫幅輪播、精選行程、旅遊故事、品牌堅持與客戶好評。"
         onSave={handleSave}
         saveDisabled={!isDirty || putDocument.isPending}
       />
 
-      {isLoading ? (
-        <p className="text-sm text-[#535F71]">載入中…</p>
-      ) : isError || !draft ? (
+      {!draft && !isError ? (
+        <AdminLoading />
+      ) : !draft ? (
         <p className="text-sm text-red-600">首頁資料載入失敗，請重新整理頁面</p>
       ) : (
         <>

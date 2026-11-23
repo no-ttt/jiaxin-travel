@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/api/auth-context";
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
 
 export default function AdminAuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -16,9 +17,7 @@ export default function AdminAuthGuard({ children }: { children: ReactNode }) {
 
   if (isLoading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA] text-sm text-[#535F71]">
-        載入中…
-      </div>
+      <AdminLoading fullScreen />
     );
   }
 

@@ -51,7 +51,7 @@ const SERVICE_CONTENT: Record<
     title: "專屬量身打造，不限人數、彈性成行！",
     description: "提供專屬行程規劃服務，由旅遊顧問協助安排交通、住宿與行程。",
     cta: "前往客製包團與需求填寫 →",
-    href: "/custom-trip",
+    href: "/custom-group",
   },
   flight: {
     icon: "/images/service-flight-icon.png",
@@ -66,7 +66,7 @@ const SERVICE_CONTENT: Record<
     title: "護照及簽證代辦服務",
     description: "提供各國簽證與護照代辦說明、所需準備文件、辦理流程及費用查詢。",
     cta: "查看護照與簽證代辦服務 →",
-    href: "/visa",
+    href: "/visa-services",
   },
 };
 
@@ -76,11 +76,8 @@ export default function Banner({ slides }: { slides: BannerSlide[] }) {
   const [activeTabId, setActiveTabId] = useState(TABS[0].id);
   const [pendingTabId, setPendingTabId] = useState<string | null>(null);
 
-  // 精緻璽品 follows 產品分類設定: its tab only shows while that category's submenu is enabled.
-  const { data: navigation } = useNavigation();
-  const premiumEnabled =
-    navigation?.categories.find((category) => category.key === "premium")?.submenu_enabled ?? false;
-  const tabs = TABS.filter((tab) => tab.id !== "boutique" || premiumEnabled);
+  // Every tab always shows, as in the design (精緻璽品 included, whatever its submenu toggle).
+  const tabs = TABS;
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   const pendingTab = pendingTabId ? tabs.find((tab) => tab.id === pendingTabId) : null;

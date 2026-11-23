@@ -53,7 +53,9 @@ export default function Footer({ variant = "light" }: { variant?: keyof typeof P
 
   // 訂購流程's 匯款資訊 switched off in the admin: its link would point at nothing.
   const links = footer.links.filter(
-    (link) => purchaseFlow?.payment.visible !== false || !link.url.endsWith("#payment-info")
+    (link) =>
+      purchaseFlow?.payment.visible !== false ||
+      !(link.url.endsWith("/pages/payment-info") || link.url.endsWith("#payment-info"))
   );
 
   // Shown at up to 210px wide; the 800px card variant stays sharp on 2x screens (thumb is 400px).

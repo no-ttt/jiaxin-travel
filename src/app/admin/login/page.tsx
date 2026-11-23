@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/api/auth-context";
 import { ApiError } from "@/lib/api/client";
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none transition-colors focus:border-[#0053E0] focus:bg-white";
@@ -43,9 +44,10 @@ function AdminLoginForm() {
     setError(null);
     setIsSubmitting(true);
     try {
+      // On success the page switches to a spinner (user is set) and the effect above navigates.
       await login({ email, password });
-      router.replace(redirectTo);
     } catch (err) {
+      setIsSubmitting(false);
       if (err instanceof ApiError && err.status < 500) {
         const message = (err.detail as { error?: { message?: string } } | undefined)?.error
           ?.message;
@@ -53,10 +55,15 @@ function AdminLoginForm() {
       } else {
         setError("登入失敗，請稍後再試");
       }
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
+  // Checking the session, or logged in and on the way to the dashboard: don't flash the form.
+  if (isLoading || user) {
+    return (
+      <AdminLoading fullScreen />
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA] px-4">

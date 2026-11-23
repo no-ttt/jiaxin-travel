@@ -21,7 +21,7 @@ export default function FilterPanel({
   onClear: () => void;
 }) {
   return (
-    <div className="flex w-[252px] shrink-0 flex-col gap-[22px] rounded-2xl border border-[#E0E3E8] bg-white px-[22px] pb-5 pt-[22px] shadow-[0px_8px_24px_0px_rgba(5,20,41,0.04)]">
+    <div className="flex w-full shrink-0 flex-col lg:w-[252px] gap-[22px] rounded-2xl border border-[#E0E3E8] bg-white px-[22px] pb-5 pt-[22px] shadow-[0px_8px_24px_0px_rgba(5,20,41,0.04)]">
       <div className="flex items-center justify-between">
         <h3 className="text-[15px] font-bold text-[#090909]">篩選條件</h3>
         <span className="text-xs font-medium text-[#0053E0]">已選 {selected.size}</span>

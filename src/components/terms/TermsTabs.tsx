@@ -23,12 +23,7 @@ export default function TermsTabs({ activeTab, onChange }: TermsTabsProps) {
               }`}
             />
           );
-          return tab.href ? (
-            <a key={tab.id} href={tab.href} className={className}>
-              {tab.label}
-              {underline}
-            </a>
-          ) : (
+          return (
             <button key={tab.id} type="button" onClick={() => onChange(tab.id)} className={className}>
               {tab.label}
               {underline}

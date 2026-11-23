@@ -43,7 +43,7 @@ export default function TagMultiSelect({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-[#E0E3E8] bg-white px-3.5 text-left outline-none focus:border-[#0053E0]"
+        className="flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-[#E0E3E8] bg-white px-3.5 text-left outline-none"
       >
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           {selected.length === 0 ? (

@@ -51,7 +51,8 @@ export function buildSaveOps(base: JourneyCard[], draft: JourneyCard[]): SaveOp[
     if (!sameJson(payload, journeyPayload(original, baseIndex))) {
       ops.push({ run: () => journeysApi.update(id, payload) });
     }
-    if (!sameJson(album, albumPayload(original))) {
+    // An album never opened in this session is untouched: skip it (it would otherwise look emptied).
+    if (card.albumLoaded && original.albumLoaded && !sameJson(album, albumPayload(original))) {
       ops.push({ run: () => journeysApi.replaceAlbum(id, album) });
     }
   });

@@ -1,6 +1,13 @@
-import Image from "next/image";
+"use client";
 
+import Image from "next/image";
+import Link from "next/link";
+import { useFooter } from "@/lib/api/hooks/useCms";
+
+/** The phone number is the one set in 網站頁尾設定 (same as the footer). */
 export default function ServiceReminderCta() {
+  const { data: footer } = useFooter();
+  const phone = footer?.phone;
   return (
     <div
       className="flex w-full flex-1 flex-col items-start justify-between gap-6 rounded-[20px] px-6 py-5 sm:flex-row sm:items-center sm:px-8"
@@ -20,15 +27,17 @@ export default function ServiceReminderCta() {
         </div>
       </div>
       <div className="flex w-full items-center justify-end gap-4 sm:w-auto">
-        <a href="tel:03-3373577" className="text-[15px] font-semibold tracking-wide text-[#002366]">
-          03-xxx-xxx
-        </a>
-        <a
-          href="#"
+        {phone && (
+          <a href={`tel:${phone}`} className="text-[15px] font-semibold tracking-wide text-[#002366]">
+            {phone}
+          </a>
+        )}
+        <Link
+          href="/contact"
           className="flex h-11 w-[118px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#0053E0] text-sm font-bold text-white hover:bg-[#0047c2]"
         >
           聯絡我們
-        </a>
+        </Link>
       </div>
     </div>
   );

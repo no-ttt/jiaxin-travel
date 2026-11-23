@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useUnsavedChangesWarning } from "@/components/admin/unsaved/UnsavedChangesProvider";
 import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,7 +33,7 @@ function errorMessage(err: unknown): string {
 
 export default function ThemeCollectionEditor({ collectionId }: { collectionId: number }) {
   const queryClient = useQueryClient();
-  const { data: collection, isLoading, isError } = useCollection(collectionId);
+  const { data: collection, isError } = useCollection(collectionId);
   const { data: themes } = useThemes();
   const theme = themes?.find((t) => t.collection_id === collectionId);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "warning" } | null>(
@@ -60,6 +62,7 @@ export default function ThemeCollectionEditor({ collectionId }: { collectionId: 
   const fieldPatch = base && draft ? collectionPatch(base, draft) : null;
   const tripsChanged = base !== null && draft !== null && !sameOrder(tripIds(base.trips), tripIds(draft.trips));
   const isDirty = fieldPatch !== null || tripsChanged;
+  useUnsavedChangesWarning(isDirty);
   const titleMissing = draft !== null && draft.title.trim() === "";
   const isValid =
     draft !== null && !titleMissing && isValidColor(draft.themeColor) && isValidColor(draft.buttonColor);
@@ -176,9 +179,9 @@ export default function ThemeCollectionEditor({ collectionId }: { collectionId: 
         </div>
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-[#535F71]">載入中…</p>
-      ) : isError || !draft ? (
+      {!draft && !isError ? (
+        <AdminLoading />
+      ) : !draft ? (
         <p className="text-sm text-red-600">找不到此主題集合頁，或資料載入失敗，請重新整理頁面</p>
       ) : (
         <>

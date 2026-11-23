@@ -48,7 +48,8 @@ export type EditableDay = {
   images: EditableImage[];
 };
 
-export type EditableNoticeTab = { _id: string; title: string; body_html: string; visible: boolean };
+export type EditableNoticeCard = { _id: string; title: string; body_html: string; visible: boolean };
+export type EditableNoticeTab = { _id: string; title: string; visible: boolean; cards: EditableNoticeCard[] };
 
 export type TripContent = {
   featureCards: EditableFeatureCard[];
@@ -100,7 +101,12 @@ export function toTripContent(detail: TripDetail): TripContent {
       description: day.description,
       images: toEditableImages(day.images),
     })),
-    noticeTabs: detail.notice_tabs.map((tab) => ({ _id: generateId("tab"), ...tab })),
+    noticeTabs: detail.notice_tabs.map((tab) => ({
+      _id: generateId("tab"),
+      title: tab.title,
+      visible: tab.visible,
+      cards: (tab.cards ?? []).map((card) => ({ _id: generateId("notice-card"), ...card })),
+    })),
   };
 }
 
@@ -138,7 +144,15 @@ export const toDaysPayload = (days: EditableDay[]): DayIn[] =>
   }));
 
 export const toNoticeTabsPayload = (tabs: EditableNoticeTab[]): NoticeTabIn[] =>
-  tabs.map(({ title, body_html, visible }) => ({ title, body_html, visible }));
+  tabs.map(({ title, visible, cards }) => ({
+    title,
+    visible,
+    cards: cards.map(({ title: cardTitle, body_html, visible: cardVisible }) => ({
+      title: cardTitle,
+      body_html,
+      visible: cardVisible,
+    })),
+  }));
 
 const TIME_PATTERN = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
@@ -152,6 +166,27 @@ export function validateFlights(flights: EditableFlights): string | null {
       if (time && !TIME_PATTERN.test(time)) {
         return `第 ${index + 1} 筆航班的${label}時間「${time}」格式錯誤，請輸入 HH:MM，例如 23:05`;
       }
+    }
+  }
+  return null;
+}
+
+/** Rich text with no visible text (e.g. "<p><br></p>", "&nbsp;"). */
+const isBlankHtml = (html: string) =>
+  !html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;|\u00a0/g, " ")
+    .trim();
+
+/** First feature card missing its 標題 or 內容, with the warning to show; null when all are filled. */
+export function findIncompleteFeatureCard(cards: EditableFeatureCard[]): { id: string; message: string } | null {
+  for (const [index, card] of cards.entries()) {
+    const missing = [!card.title.trim() && "卡面標題", isBlankHtml(card.body_html) && "內容"].filter(Boolean);
+    if (missing.length) {
+      return {
+        id: card._id,
+        message: `第 ${index + 1} 張特色卡面尚未填寫${missing.join("、")}，請填寫或刪除後再儲存`,
+      };
     }
   }
   return null;
@@ -222,4 +257,20 @@ export function moveById<T extends { _id: string }>(items: T[], fromId: string, 
   const [moved] = next.splice(from, 1);
   next.splice(to, 0, moved);
   return next;
+}
+
+const hasHtmlText = (html: string) => html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() !== "";
+
+/** Whether 行程特色／航程資訊／每日行程 have anything filled in (lost when switching to an external trip). */
+export function hasOwnTripContent(content: TripContent): boolean {
+  const { featureCards, flights, days } = content;
+  return (
+    featureCards.some((card) => card.title.trim() || hasHtmlText(card.body_html) || card.images.length > 0) ||
+    flights.note.trim() !== "" ||
+    flights.rows.some(({ _id, day_offset, leg_label, ...fields }) => {
+      void _id;
+      return day_offset > 0 || Boolean(leg_label?.trim()) || Object.values(fields).some((v) => v.trim());
+    }) ||
+    days.some((day) => !isDayEmpty(day))
+  );
 }

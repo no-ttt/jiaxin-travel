@@ -458,9 +458,17 @@ export default function TripsTable() {
 
         {trips.length === 0 && (
           <div className="flex items-center justify-center border-t border-[#E0E3E8] px-4 py-10">
-            <span className="text-sm font-medium leading-[1.45em] text-[#535F71]">
-              {isLoading ? "載入中…" : isError ? "行程清單載入失敗" : "沒有符合條件的行程"}
-            </span>
+            {isLoading ? (
+              <span
+                role="status"
+                aria-label="載入中"
+                className="h-6 w-6 animate-spin rounded-full border-2 border-[#E0E3E8] border-t-[#0053E0]"
+              />
+            ) : (
+              <span className="text-sm font-medium leading-[1.45em] text-[#535F71]">
+                {isError ? "行程清單載入失敗" : "沒有符合條件的行程"}
+              </span>
+            )}
           </div>
         )}
 

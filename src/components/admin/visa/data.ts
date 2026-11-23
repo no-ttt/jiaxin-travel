@@ -59,6 +59,26 @@ const DOC_LINK_SLOTS = 2;
 const NOTICE_DOC_SLOTS = 2;
 const DOWNLOAD_SLOTS = 4;
 const DEFAULT_NOTICE_TITLE = "辦證須知";
+const DEFAULT_DOWNLOADS_TITLE = "文件下載";
+
+const escapeHtml = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Rich text → plain text (block ends and <br> become line breaks). */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
 
 /** Pads with blank rows up to `count`; longer server lists are kept whole. */
 function padTo<T>(items: T[], count: number, create: () => T): T[] {
@@ -75,26 +95,39 @@ const isBlankDoc = (doc: VisaRequiredDoc) =>
   !doc.title.trim() && isBlankHtml(doc.body_html) && doc.downloads.length === 0;
 const isBlankNoticeDoc = (doc: VisaNoticeDoc) => !doc.title.trim() && isBlankHtml(doc.body_html);
 const isBlankDownloadDoc = (file: VisaDownloadDoc) =>
-  isBlankDownload(file) && !file.title.trim() && !file.description.trim();
+  isBlankDownload(file) && !file.title.trim() && !file.description.trim() && isBlankHtml(file.description_html ?? "");
 
 const toEditableDownload = (file: VisaDownload): EditableDownload => ({ ...file, _id: generateId("download") });
 
 function toEditableDetail(detail: VisaServiceDetail): EditableDetail {
-  const docs = padTo(detail.required_docs, REQUIRED_DOC_SLOTS, () => ({ title: "", body_html: "", downloads: [] }));
+  // The admin CMS endpoint returns the stored document as-is; older documents lack fields added
+  // later (e.g. notice_docs / notice_title), which the public endpoint fills in. Default them here too.
+  const docs = padTo(detail.required_docs ?? [], REQUIRED_DOC_SLOTS, () => ({
+    title: "",
+    body_html: "",
+    downloads: [],
+  }));
   return {
     ...detail,
-    required_docs: docs.map((doc, i) => ({
-      ...doc,
-      _id: generateId("doc"),
-      downloads: (i === LINKED_DOC_INDEX ? padTo(doc.downloads, DOC_LINK_SLOTS, blankDownload) : doc.downloads).map(
-        toEditableDownload
-      ),
-    })),
-    notice_docs: padTo(detail.notice_docs, NOTICE_DOC_SLOTS, () => ({ title: "", body_html: "" })).map(
+    notice_title: detail.notice_title ?? DEFAULT_NOTICE_TITLE,
+    required_docs: docs.map((doc, i) => {
+      const downloads = doc.downloads ?? [];
+      return {
+        ...doc,
+        _id: generateId("doc"),
+        downloads: (i === LINKED_DOC_INDEX ? padTo(downloads, DOC_LINK_SLOTS, blankDownload) : downloads).map(
+          toEditableDownload
+        ),
+      };
+    }),
+    notice_docs: padTo(detail.notice_docs ?? [], NOTICE_DOC_SLOTS, () => ({ title: "", body_html: "" })).map(
       (doc) => ({ ...doc, _id: generateId("notice") })
     ),
-    downloads: padTo(detail.downloads, DOWNLOAD_SLOTS, blankDownloadDoc).map((file) => ({
+    downloads_title: detail.downloads_title ?? DEFAULT_DOWNLOADS_TITLE,
+    downloads: padTo(detail.downloads ?? [], DOWNLOAD_SLOTS, blankDownloadDoc).map((file) => ({
       ...file,
+      // Saved before 文件說明 became rich text: show the plain text as a paragraph.
+      description_html: file.description_html ?? (file.description ? `<p>${escapeHtml(file.description)}</p>` : ""),
       _id: generateId("download"),
     })),
   };
@@ -130,7 +163,14 @@ function fromEditableDetail(detail: EditableDetail): VisaServiceDetail {
     ...detail,
     required_docs: dropBlank(docs, isBlankDoc),
     notice_docs: dropBlank(detail.notice_docs.map(omitId), isBlankNoticeDoc),
-    downloads: dropBlank(detail.downloads.map(omitId), isBlankDownloadDoc),
+    downloads: dropBlank(
+      detail.downloads.map((file) => ({
+        ...omitId(file),
+        // The current backend only stores plain text (max 500); keep it in sync with the editor.
+        description: htmlToText(file.description_html ?? "").slice(0, 500),
+      })),
+      isBlankDownloadDoc
+    ),
   };
 }
 
@@ -183,6 +223,7 @@ function createDetail(): EditableDetail {
     notice_docs: [],
     notice_html: "",
     downloads_visible: true,
+    downloads_title: DEFAULT_DOWNLOADS_TITLE,
     downloads: [],
   });
 }

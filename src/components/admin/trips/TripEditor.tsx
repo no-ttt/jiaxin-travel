@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useUnsavedChangesWarning } from "@/components/admin/unsaved/UnsavedChangesProvider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +10,8 @@ import AdminToast from "@/components/admin/ui/AdminToast";
 import { ApiError } from "@/lib/api/client";
 import { tripsApi } from "@/lib/api/endpoints/trips";
 import { useTrip } from "@/lib/api/hooks/useTrips";
+import { useBadgeOptions, useTripStatusOptions } from "@/lib/api/hooks/useTaxonomy";
+import type { TaxonomyOption } from "@/lib/api/types/taxonomy";
 import type { TripDetail, TripType } from "@/lib/api/types/trip";
 import {
   generateTripCode,
@@ -24,11 +28,19 @@ import {
   toFlightsPayload,
   toNoticeTabsPayload,
   toTripContent,
+  findIncompleteFeatureCard,
+  hasOwnTripContent,
   validateFlights,
   type TripContent,
 } from "./content";
 import { EDITOR_STEPS, OWN_TRIP_ONLY_STEPS, type EditorStepKey } from "./editor-steps";
 import { writePreviewDraft } from "./preview-draft";
+import {
+  sameIdentityOptions,
+  saveIdentityOptions,
+  toIdentityOptions,
+  type IdentityOptions,
+} from "./identity-options";
 import EditorStepRail from "./EditorStepRail";
 import CoverSection from "./CoverSection";
 import BasicInfoSection from "./BasicInfoSection";
@@ -87,7 +99,7 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
   const isClickScrolling = useRef(false);
 
   const queryClient = useQueryClient();
-  const { data: detail, isLoading, isError } = useTrip(tripId);
+  const { data: detail, isError } = useTrip(tripId);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
   const closeToast = useCallback(() => setToast(null), []);
@@ -98,7 +110,13 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
   const [draft, setDraft] = useState<EditorDraft | null>(null);
   if (detail && detail !== syncedDetail) {
     const incoming = { form: toTripForm(detail), content: toTripContent(detail) };
-    const next = draft ? { ...incoming, content: mergeContent(draft.content, incoming.content) } : incoming;
+    // Keep the type the user last picked: a switch clicked while a rebuild runs is applied after it.
+    const next = draft
+      ? {
+          form: { ...incoming.form, tripType: draft.form.tripType },
+          content: mergeContent(draft.content, incoming.content),
+        }
+      : incoming;
     setSyncedDetail(detail);
     setSaved(next);
     setDraft(next);
@@ -113,6 +131,23 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
     draft !== null &&
     saved !== null &&
     JSON.stringify(toPayloads(draft)) !== JSON.stringify(toPayloads(saved));
+  // 識別內容設定 (行程狀態／卡片標章 lists): edited here, applied on 儲存變更 like the trip itself.
+  const { data: statusList } = useTripStatusOptions();
+  const { data: badgeList } = useBadgeOptions();
+  const [syncedLists, setSyncedLists] = useState<[TaxonomyOption[], TaxonomyOption[]] | null>(null);
+  const [optionBase, setOptionBase] = useState<IdentityOptions | null>(null);
+  const [options, setOptions] = useState<IdentityOptions | null>(null);
+  if (statusList && badgeList && (syncedLists?.[0] !== statusList || syncedLists?.[1] !== badgeList)) {
+    const incoming = toIdentityOptions(statusList, badgeList);
+    // Keep unsaved list edits across a background refetch.
+    const hasEdits = options && optionBase && !sameIdentityOptions(options, optionBase);
+    setSyncedLists([statusList, badgeList]);
+    setOptionBase(incoming);
+    if (!hasEdits) setOptions(incoming);
+  }
+  const optionsDirty = options !== null && optionBase !== null && !sameIdentityOptions(options, optionBase);
+  const hasUnsaved = isDirty || optionsDirty;
+  useUnsavedChangesWarning(hasUnsaved);
 
   // Not a state updater: the day-count sync may ask for confirmation, which must run exactly once.
   const handleFormChange = (patch: TripFormPatch) => {
@@ -154,15 +189,59 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
       setToast({ message: flightError, variant: "warning" });
       return;
     }
+    const incompleteCard = isExternal ? null : findIncompleteFeatureCard(draft.content.featureCards);
+    if (incompleteCard) {
+      setToast({ message: incompleteCard.message, variant: "warning" });
+      // Open that card and bring the 行程特色 step into view so it's easy to fix.
+      updateContent("featureCards")((cards) =>
+        cards.map((card) => (card._id === incompleteCard.id ? { ...card, expanded: true } : card))
+      );
+      setActiveStep("highlights");
+      // Scroll once the card has re-rendered expanded, so it lands just below the pinned header.
+      window.requestAnimationFrame(() => {
+        const cardEl = document.querySelector(`[data-card-id="${incompleteCard.id}"]`);
+        if (!cardEl) return;
+        isClickScrolling.current = true;
+        window.scrollTo({ top: cardEl.getBoundingClientRect().top + window.scrollY - stickyOffset() - 12, behavior: "smooth" });
+        window.setTimeout(() => {
+          isClickScrolling.current = false;
+        }, 700);
+      });
+      return;
+    }
     // The backend doesn't check this, but an external trip's frontend CTA needs the link.
     if (isExternal && draft.form.publish_status === "published" && !draft.form.external_url.trim()) {
       setToast({ message: "外部連結行程需填寫「外部連結網址」才能上架", variant: "warning" });
       return;
     }
 
-    const next = toPayloads(draft);
+    // Option lists first: the trip may use a status／badge that is only created now.
+    let draftToSave = draft;
+    if (options && optionBase && optionsDirty) {
+      setIsSaving(true);
+      const result = await saveIdentityOptions(optionBase, options);
+      const remap = (id: number | null) => (id !== null && id < 0 ? (result.createdIds.get(id) ?? null) : id);
+      const remapForm = (f: TripForm): TripForm => ({ ...f, status_id: remap(f.status_id), badge_id: remap(f.badge_id) });
+      const remapList = (list: IdentityOptions["statuses"]) =>
+        list.map((o) => (o.id < 0 && result.createdIds.has(o.id) ? { ...o, id: result.createdIds.get(o.id)! } : o));
+      setOptionBase(result.saved);
+      setOptions({ statuses: remapList(options.statuses), badges: remapList(options.badges) });
+      await queryClient.invalidateQueries({ queryKey: ["taxonomy"] });
+      if (result.error) {
+        setToast({
+          message: `「識別內容設定」儲存失敗：${apiErrorMessage(result.error, "請稍後再試")}`,
+          variant: "warning",
+        });
+        setIsSaving(false);
+        return;
+      }
+      draftToSave = { ...draft, form: remapForm(draft.form) };
+      setDraft((current) => (current ? { ...current, form: remapForm(current.form) } : current));
+    }
+
+    const next = toPayloads(draftToSave);
     const prev = toPayloads(saved);
-    const { form, content } = draft;
+    const { form, content } = draftToSave;
     // `commit` copies the step's part of the draft into a baseline once that request succeeded.
     const steps: {
       label: string;
@@ -242,6 +321,9 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
    * with the other type (new trip code, draft), copy the current draft into it, delete the old one.
    */
   const [pendingTripType, setPendingTripType] = useState<TripType | null>(null);
+  // A switch clicked while a rebuild is running: shown right away, applied once the rebuild ends.
+  const queuedTripType = useRef<TripType | null>(null);
+
 
   const handleTripTypeChange = async (tripType: TripType) => {
     if (!draft) return;
@@ -259,13 +341,19 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
         product_name: source.form.product_name,
       });
       newId = created.id;
-      await tripsApi.update(newId, toTripUpdate(source.form));
-      if (!toExternal) {
-        await tripsApi.putFeatureCards(newId, toFeatureCardsPayload(source.content.featureCards));
-        await tripsApi.putFlights(newId, toFlightsPayload(source.content.flights));
-        await tripsApi.putDays(newId, toDaysPayload(source.content.days));
-      }
-      await tripsApi.putNoticeTabs(newId, toNoticeTabsPayload(source.content.noticeTabs));
+      // Independent copies, sent together to keep the switch short.
+      const copyId = newId;
+      await Promise.all([
+        tripsApi.update(copyId, toTripUpdate(source.form)),
+        tripsApi.putNoticeTabs(copyId, toNoticeTabsPayload(source.content.noticeTabs)),
+        ...(toExternal
+          ? []
+          : [
+              tripsApi.putFeatureCards(copyId, toFeatureCardsPayload(source.content.featureCards)),
+              tripsApi.putFlights(copyId, toFlightsPayload(source.content.flights)),
+              tripsApi.putDays(copyId, toDaysPayload(source.content.days)),
+            ]),
+      ]);
       await tripsApi.remove(tripId);
       // Refresh lists, but not the old (now deleted) trip, which would 404 before navigation.
       queryClient.invalidateQueries({
@@ -278,10 +366,15 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
         queryKey: ["trips", rebuiltId],
         queryFn: () => tripsApi.get(rebuiltId),
       });
+      // Stop any in-flight / focus refetch of the deleted trip (it would 404 and flag an error).
+      const oldId = tripId;
+      await queryClient.cancelQueries({ queryKey: ["trips", oldId], exact: true });
       setTripId(rebuiltId);
       window.history.replaceState(null, "", `/admin/dashboard/trips/${rebuiltId}`);
+      window.setTimeout(() => queryClient.removeQueries({ queryKey: ["trips", oldId], exact: true }), 0);
       setIsSaving(false);
     } catch (err) {
+      queuedTripType.current = null;
       // Roll back the half-built copy; the original trip is untouched until the final delete.
       const rollbackFailed = newId
         ? await tripsApi.remove(newId).then(
@@ -300,6 +393,30 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
       setIsSaving(false);
     }
   };
+
+  const requestTripType = (type: TripType) => {
+    if (!draft) return;
+    if (isSaving) {
+      queuedTripType.current = type;
+      setDraft((current) => (current ? { ...current, form: { ...current.form, tripType: type } } : current));
+      return;
+    }
+    // Only ask when the other type's fields have something filled in.
+    const hasFilled =
+      type === "external"
+        ? hasOwnTripContent(draft.content)
+        : Boolean(draft.form.external_url.trim() || draft.form.source_agency.trim());
+    if (hasFilled) setPendingTripType(type);
+    else handleTripTypeChange(type);
+  };
+
+  useEffect(() => {
+    if (isSaving || !queuedTripType.current) return;
+    const type = queuedTripType.current;
+    queuedTripType.current = null;
+    if (detail && detail.trip_type !== type) requestTripType(type);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once each time a rebuild ends
+  }, [isSaving]);
 
   // Once a preview tab is open, keep its draft in sync so it re-renders as the admin edits.
   const isPreviewOpen = useRef(false);
@@ -322,6 +439,10 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
     isPreviewOpen.current = true;
   };
 
+  // Height of the pinned header + step rail, so sections land just below it.
+  const stickyRef = useRef<HTMLDivElement>(null);
+  const stickyOffset = () => (stickyRef.current?.offsetHeight ?? 200) + 4;
+
   useEffect(() => {
     const sections = EDITOR_STEPS.map((step) => document.getElementById(step.key)).filter(
       (el): el is HTMLElement => el !== null
@@ -339,7 +460,7 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
           setActiveStep(key);
         }
       },
-      { rootMargin: "-120px 0px -70% 0px", threshold: 0 }
+      { rootMargin: `-${stickyOffset() + 20}px 0px -60% 0px`, threshold: 0 }
     );
 
     sections.forEach((section) => observer.observe(section));
@@ -351,7 +472,7 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
     const target = document.getElementById(step);
     if (!target) return;
     isClickScrolling.current = true;
-    const top = target.getBoundingClientRect().top + window.scrollY - 100;
+    const top = target.getBoundingClientRect().top + window.scrollY - stickyOffset();
     window.scrollTo({ top, behavior: "smooth" });
     window.setTimeout(() => {
       isClickScrolling.current = false;
@@ -360,51 +481,52 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
 
   return (
     <div className="flex flex-col gap-7">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-[3px]">
-          <Link
-            href="/admin/dashboard/trips"
-            className="text-[13px] font-medium leading-[1.45em] text-[#535F71] hover:text-[#0053E0]"
-          >
-            行程產品管理
-          </Link>
-          <h1 className="text-[28px] font-bold leading-[1.45em] text-[#090909]">行程頁資料</h1>
-          <p className="text-sm font-medium leading-[1.45em] text-[#535F71]">
-            依序填寫行程內容，完成後可預覽。
-          </p>
+      {/* Header + step rail stay pinned together while scrolling. */}
+      <div ref={stickyRef} className="sticky top-0 z-30 -mb-4 -mt-6 flex flex-col gap-7 bg-[#FAFAFA] pb-4 pt-6">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-[3px]">
+            <Link
+              href="/admin/dashboard/trips"
+              className="text-[13px] font-medium leading-[1.45em] text-[#535F71] hover:text-[#0053E0]"
+            >
+              行程產品管理
+            </Link>
+            <h1 className="text-[28px] font-bold leading-[1.45em] text-[#090909]">行程頁資料</h1>
+            <p className="text-sm font-medium leading-[1.45em] text-[#535F71]">
+              依序填寫行程內容，完成後可預覽。
+            </p>
+          </div>
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={handlePreview}
+              disabled={!draft}
+              className="flex h-10 w-[92px] cursor-pointer items-center justify-center rounded-xl border border-[#E0E3E8] bg-white text-sm font-bold leading-[1.45em] text-[#090909] transition hover:bg-[#F6F6F6]"
+            >
+              預覽
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!hasUnsaved || isSaving}
+              className="flex h-10 w-[126px] cursor-pointer items-center justify-center rounded-xl bg-[#0053E0] text-sm font-bold leading-[1.45em] text-white transition hover:bg-[#0047BE] disabled:cursor-not-allowed disabled:bg-[#B4BED1] disabled:hover:bg-[#B4BED1]"
+            >
+              儲存變更
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2.5">
-          <button
-            type="button"
-            onClick={handlePreview}
-            disabled={!draft}
-            className="flex h-10 w-[92px] cursor-pointer items-center justify-center rounded-xl border border-[#E0E3E8] bg-white text-sm font-bold leading-[1.45em] text-[#090909] transition hover:bg-[#F6F6F6]"
-          >
-            預覽
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!isDirty || isSaving}
-            className="flex h-10 w-[126px] cursor-pointer items-center justify-center rounded-xl bg-[#0053E0] text-sm font-bold leading-[1.45em] text-white transition hover:bg-[#0047BE] disabled:cursor-not-allowed disabled:bg-[#B4BED1] disabled:hover:bg-[#B4BED1]"
-          >
-            儲存變更
-          </button>
-        </div>
-      </div>
 
-      <div className="sticky top-9 z-30">
         <EditorStepRail activeStep={activeStep} onSelect={handleSelectStep} steps={visibleSteps} />
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-[#535F71]">載入中…</p>
-      ) : isError || !draft ? (
+      {!draft && !isError ? (
+        <AdminLoading />
+      ) : !draft ? (
         <p className="text-sm text-red-600">行程資料載入失敗，請重新整理頁面</p>
       ) : (
         <div className="flex flex-col gap-5">
           {visibleSteps.map((step) => (
-            <div key={step.key} id={step.key} className="scroll-mt-[100px]">
+            <div key={step.key} id={step.key} className="scroll-mt-[220px]">
               {step.key === "cover" ? (
                 <CoverSection
                   title={step.title}
@@ -418,7 +540,9 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
                   description={step.description}
                   value={draft.form}
                   onChange={handleFormChange}
-                  onTripTypeChange={(type) => !isSaving && setPendingTripType(type)}
+                  onTripTypeChange={requestTripType}
+                  options={options}
+                  onOptionsChange={setOptions}
                 />
               ) : step.key === "highlights" ? (
                 <HighlightsSection
@@ -464,7 +588,12 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
               : "確定要改為自建行程嗎？"
           }
           confirmLabel="確定變更"
-          onCancel={() => setPendingTripType(null)}
+          onCancel={() => {
+            setPendingTripType(null);
+            // A queued switch already showed the new type; put the real one back.
+            const actual = detail?.trip_type;
+            if (actual) setDraft((current) => (current ? { ...current, form: { ...current.form, tripType: actual } } : current));
+          }}
           onConfirm={() => {
             const tripType = pendingTripType;
             setPendingTripType(null);

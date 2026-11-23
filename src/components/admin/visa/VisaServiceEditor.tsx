@@ -1,5 +1,8 @@
 "use client";
 
+import { AdminLoading } from "@/components/admin/ui/AdminSpinner";
+import { useUnsavedChangesWarning } from "@/components/admin/unsaved/UnsavedChangesProvider";
+import { usePreviewWriter } from "@/components/admin/preview/draft-store";
 import { useState } from "react";
 import AdminPageHeader from "../AdminPageHeader";
 import AdminToast from "../ui/AdminToast";
@@ -30,7 +33,7 @@ function errorMessage(err: unknown): string {
 }
 
 export default function VisaServiceEditor() {
-  const { data: doc, isLoading, isError } = useCmsDocument<VisaServices>(CMS_KEY);
+  const { data: doc, isError } = useCmsDocument<VisaServices>(CMS_KEY);
   const putDocument = usePutCmsDocument<VisaServices>(CMS_KEY);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "warning" } | null>(
     null
@@ -51,6 +54,8 @@ export default function VisaServiceEditor() {
     draft !== null &&
     baseline !== null &&
     !isSameVisaServices(fromEditableVisaServices(draft), baseline);
+  useUnsavedChangesWarning(isDirty);
+  const openPreview = usePreviewWriter("visa-services", draft, (d) => fromEditableVisaServices(d));
 
   const handleSave = () => {
     if (!draft) return;
@@ -63,15 +68,16 @@ export default function VisaServiceEditor() {
   return (
     <div className="flex w-full flex-col gap-7">
       <AdminPageHeader
+        onPreview={openPreview}
         title="護照及簽證代辦服務"
         description="管理護照代辦與熱門國家簽證項目資料，並維護各項目「查看詳情」視窗中的所需文件內容。"
         onSave={handleSave}
         saveDisabled={!isDirty || putDocument.isPending}
       />
 
-      {isLoading ? (
-        <p className="text-sm text-[#535F71]">載入中…</p>
-      ) : isError || !draft ? (
+      {!draft && !isError ? (
+        <AdminLoading />
+      ) : !draft ? (
         <p className="text-sm text-red-600">代辦服務資料載入失敗，請重新整理頁面</p>
       ) : (
         <>

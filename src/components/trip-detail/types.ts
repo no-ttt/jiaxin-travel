@@ -62,6 +62,8 @@ export type TripDetail = {
   deposit: string;
   guaranteedDeparture: boolean;
   highlights: string[];
+  /** 特色景點 as formatted editor HTML; when empty the plain `highlights` list is shown. */
+  highlightsHtml?: string;
   price: string;
   flights: FlightLeg[];
   featureBlocks: FeatureBlock[];
@@ -73,7 +75,7 @@ export type TripDetail = {
   reminders: string[];
   ageReminderItems: string[];
   /** Notice tabs from the API (visible ones only); replaces the built-in placeholder tabs when present. */
-  noticeTabs?: { title: string; bodyHtml: string }[];
+  noticeTabs?: { title: string; cards: { title: string; bodyHtml: string }[] }[];
   /** External-link trips send the CTA to the partner site instead of the inquiry form. */
   externalUrl?: string | null;
   /** 封面主標題 shown as the page heading; falls back to `title` (product name). */

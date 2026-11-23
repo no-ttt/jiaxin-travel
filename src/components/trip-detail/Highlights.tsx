@@ -1,5 +1,6 @@
 import ImageCarousel from "./ImageCarousel";
 import type { FeatureBlock, SpecItem, TripDetail } from "./types";
+import { colorListMarkers } from "@/lib/listMarkerColor";
 
 function SectionCard({ children }: { children: React.ReactNode }) {
   return (
@@ -25,7 +26,7 @@ function FeatureCard({ block }: { block: FeatureBlock }) {
       <SectionHeader title={block.title} />
       {block.bodyHtml !== undefined ? (
         // Rich text authored in the admin editor (行程特色).
-        <div className="text-sm leading-[1.75] text-[#535F71] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: block.bodyHtml }} />
+        <div className="text-sm leading-[1.75] text-[#535F71] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: colorListMarkers(block.bodyHtml) }} />
       ) : (
         <div className="flex flex-col gap-5">
           {block.paragraphs.map((p, i) => (

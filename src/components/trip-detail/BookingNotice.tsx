@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { TripDetail } from "./types";
+import { colorListMarkers } from "@/lib/listMarkerColor";
 
 const TABS = ["行前必讀", "護照簽證", "旅遊指南", "出入境須知"] as const;
 type Tab = (typeof TABS)[number];
@@ -11,6 +12,9 @@ const PLACEHOLDER_CONTENT: Record<Exclude<Tab, "行前必讀">, string> = {
   旅遊指南: "當地電壓、時差、氣候與穿著建議等旅遊資訊，將於行前說明會提供完整資料。",
   出入境須知: "海關申報、行李限重與免稅規定，請參考各國海關最新公告，專員亦會於出發前提醒。",
 };
+
+const RICH_TEXT_CLASS =
+  "text-sm leading-relaxed text-[#333] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5";
 
 export default function BookingNotice({ trip }: { trip: TripDetail }) {
   if (trip.noticeTabs) return <ApiBookingNotice tabs={trip.noticeTabs} />;
@@ -50,11 +54,24 @@ function ApiBookingNotice({ tabs }: { tabs: NonNullable<TripDetail["noticeTabs"]
             ★ 為確保您有一趟美好的旅行，報名前請務必詳閱以下內容
           </p>
         </div>
-        {active && (
-          <div
-            className="rounded-2xl border border-[#E0E3E8] bg-white px-5 py-[22px] text-sm leading-relaxed text-[#333] shadow-[0px_7px_20px_0px_rgba(5,20,41,0.04)] [&_a]:text-[#0053E0] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
-            dangerouslySetInnerHTML={{ __html: active.bodyHtml }}
-          />
+        {active && active.cards.length > 0 && (
+          // Same layout as the built-in 行前必讀 panel: one titled block per card.
+          <div className="flex flex-col gap-[30px] rounded-2xl border border-[#E0E3E8] bg-white px-5 py-[22px] shadow-[0px_7px_20px_0px_rgba(5,20,41,0.04)]">
+            {active.cards.map((card, index) => (
+              <div key={index} className="flex flex-col gap-1.5">
+                {card.title && (
+                  <div className="flex items-center gap-2.5 border-b border-[#E0E3E8] pb-2.5">
+                    <span className="h-2 w-2 rounded-sm bg-[#0053E0]" />
+                    <h3 className="text-base text-[#333]">{card.title}</h3>
+                  </div>
+                )}
+                <div
+                  className={RICH_TEXT_CLASS}
+                  dangerouslySetInnerHTML={{ __html: colorListMarkers(card.bodyHtml) }}
+                />
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </section>

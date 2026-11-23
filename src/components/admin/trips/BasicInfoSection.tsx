@@ -1,17 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import AdminConfirmDialog from "@/components/admin/ui/AdminConfirmDialog";
 import AdminToast from "@/components/admin/ui/AdminToast";
-import {
-  useBadgeOptions,
-  useRegions,
-  useThemes,
-  useTripStatusOptions,
-} from "@/lib/api/hooks/useTaxonomy";
+import { useRegions, useThemes } from "@/lib/api/hooks/useTaxonomy";
 import type { PublishStatus, TripType } from "@/lib/api/types/trip";
 import AdminSelect from "./AdminSelect";
 import AdminDateField from "./AdminDateField";
 import TagMultiSelect from "./TagMultiSelect";
+import { newOptionId, type IdentityOptions } from "./identity-options";
 import {
   formatAmount,
   formatPriceFrom,
@@ -22,18 +19,15 @@ import {
 
 type Chip = { id: string; label: string };
 
-const NO_STATUS = "未設定";
-const BADGE_AUTO = "自動判斷";
-const BADGE_NONE = "不顯示";
 const LISTING_LABELS: Record<PublishStatus, string> = {
   published: "上架中",
-  unpublished: "下架",
+  unpublished: "已下架",
   draft: "草稿",
 };
 const ZONES: { label: string; key: "in_overseas_group" | "in_theme_travel" | "in_premium" | "in_meian" }[] = [
   { label: "國外團體", key: "in_overseas_group" },
   { label: "主題旅遊", key: "in_theme_travel" },
-  { label: "精緻臻品", key: "in_premium" },
+  { label: "精緻璽品", key: "in_premium" },
   { label: "美安專區", key: "in_meian" },
 ];
 const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
@@ -166,6 +160,8 @@ export default function BasicInfoSection({
   value,
   onChange,
   onTripTypeChange,
+  options,
+  onOptionsChange,
 }: {
   title: string;
   description: string;
@@ -173,35 +169,58 @@ export default function BasicInfoSection({
   onChange: TripFormChange;
   /** Trip type is fixed after creation; the editor handles a change by rebuilding the trip. */
   onTripTypeChange: (type: TripType) => void;
+  /** 行程狀態／卡片標章 lists (draft; saved with 儲存變更). */
+  options: IdentityOptions | null;
+  onOptionsChange: (options: IdentityOptions) => void;
 }) {
   const { data: themes } = useThemes();
   const { data: regions } = useRegions();
-  const { data: statuses } = useTripStatusOptions();
-  const { data: badges } = useBadgeOptions();
+  const statuses = options?.statuses;
+  const badges = options?.badges;
   const themeOptions = toChips(themes);
   const statusOptions = toChips(statuses);
   const badgeOptions = toChips(badges);
   const regionTags = (regions ?? []).map((region) => region.name);
 
-  // Managing the option lists themselves (taxonomy create/delete) is not wired up yet.
+  // Managing the theme list itself is not wired up here (themes are managed in 產品分類設定).
   const [notice, setNotice] = useState<string | null>(null);
   const closeNotice = useCallback(() => setNotice(null), []);
   const notWired = () => setNotice("選項管理尚未串接，請先使用既有選項");
 
+  // 行程狀態／卡片標章 lists: edits stay in the draft until 儲存變更.
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    kind: "statuses" | "badges";
+    id: number;
+    label: string;
+  } | null>(null);
+
+  const addOption = (kind: "statuses" | "badges", label: string) => {
+    if (!options) return;
+    if (options[kind].some((option) => option.name === label)) {
+      setNotice(`「${label}」已存在`);
+      return;
+    }
+    onOptionsChange({ ...options, [kind]: [...options[kind], { id: newOptionId(), name: label }] });
+  };
+
+  const removeOption = () => {
+    if (!options || !pendingRemoval) return;
+    const { kind, id } = pendingRemoval;
+    setPendingRemoval(null);
+    onOptionsChange({ ...options, [kind]: options[kind].filter((option) => option.id !== id) });
+    // Saving removes it from every trip; clear it here so this trip doesn't send a removed id.
+    if (kind === "statuses" && value.status_id === id) onChange({ status_id: null });
+    if (kind === "badges" && value.badge_id === id) onChange({ badge_mode: "auto", badge_id: null });
+  };
+
   const tripType = value.tripType === "own" ? "custom" : "external";
 
-  const tripStatus = statuses?.find((option) => option.id === value.status_id)?.name ?? NO_STATUS;
+  // The dropdowns list exactly the managed options; nothing selected shows an empty field.
+  const tripStatus = statuses?.find((option) => option.id === value.status_id)?.name ?? "";
   const cardBadge =
-    value.badge_mode === "none"
-      ? BADGE_NONE
-      : value.badge_mode === "custom"
-        ? (badges?.find((option) => option.id === value.badge_id)?.name ?? BADGE_AUTO)
-        : BADGE_AUTO;
-  const setCardBadge = (label: string) => {
-    if (label === BADGE_AUTO) onChange({ badge_mode: "auto", badge_id: null });
-    else if (label === BADGE_NONE) onChange({ badge_mode: "none", badge_id: null });
-    else onChange({ badge_mode: "custom", badge_id: badges?.find((b) => b.name === label)?.id ?? null });
-  };
+    value.badge_mode === "custom" ? (badges?.find((option) => option.id === value.badge_id)?.name ?? "") : "";
+  const setCardBadge = (label: string) =>
+    onChange({ badge_mode: "custom", badge_id: badges?.find((b) => b.name === label)?.id ?? null });
 
   const selectedMonths = value.departure_months.map((month) => `${month}月`);
   const toggleMonth = (label: string) => {
@@ -369,7 +388,7 @@ export default function BasicInfoSection({
           <div className="flex flex-1 flex-col gap-[7px]">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">行程狀態</span>
             <AdminSelect
-              options={[NO_STATUS, ...statusOptions.map((o) => o.label)]}
+              options={statusOptions.map((o) => o.label)}
               value={tripStatus}
               onChange={(label) =>
                 onChange({ status_id: statuses?.find((option) => option.name === label)?.id ?? null })
@@ -379,7 +398,7 @@ export default function BasicInfoSection({
           <div className="flex flex-1 flex-col gap-[7px]">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">卡片 Badge</span>
             <AdminSelect
-              options={[BADGE_AUTO, ...badgeOptions.map((o) => o.label), BADGE_NONE]}
+              options={badgeOptions.map((o) => o.label)}
               value={cardBadge}
               onChange={setCardBadge}
             />
@@ -452,9 +471,15 @@ export default function BasicInfoSection({
             </div>
             <ManagedChipList
               chips={statusOptions}
-              onRemove={notWired}
+              onRemove={(id) =>
+                setPendingRemoval({
+                  kind: "statuses",
+                  id: Number(id),
+                  label: statusOptions.find((chip) => chip.id === id)?.label ?? "",
+                })
+              }
               addPlaceholder="輸入狀態名稱"
-              onAdd={notWired}
+              onAdd={(label) => addOption("statuses", label)}
             />
           </div>
 
@@ -478,7 +503,7 @@ export default function BasicInfoSection({
                     <span className="text-[13px] font-medium leading-[1.45em] text-[#002366]">{chip.label}</span>
                     <button
                       type="button"
-                      onClick={notWired}
+                      onClick={() => setPendingRemoval({ kind: "badges", id: Number(chip.id), label: chip.label })}
                       aria-label={`移除 ${chip.label}`}
                       className="cursor-pointer text-sm leading-none text-[#535F71] opacity-80 hover:text-[#090909]"
                     >
@@ -492,16 +517,10 @@ export default function BasicInfoSection({
               </div>
               <BadgeAddOption
                 placeholder="輸入標章文字"
-                onAdd={notWired}
+                onAdd={(label) => addOption("badges", label)}
               />
             </div>
           </div>
-        </div>
-
-        <div className="flex items-center rounded-lg bg-[#ECF1FA] px-3 py-2.5">
-          <p className="text-[13px] leading-[1.45em] text-[#002366]">
-            自動判斷：重要狀態優先於主題；進入專屬集合頁時，自動隱藏與集合本身重複的 Badge。
-          </p>
         </div>
       </div>
 
@@ -510,7 +529,7 @@ export default function BasicInfoSection({
         <div className="flex flex-col gap-1">
           <h3 className="text-[15px] font-bold leading-[1.45em] text-[#002366]">所屬專區</h3>
           <p className="text-[13px] leading-[1.45em] text-[#535F71]">
-            前台入口分類，可複選、彼此不互斥。「國外團體」「主題旅遊」沿用上方地區／主題標籤自動分組呈現；「精緻臻品」「美安專區」為人工策展列表，行程仍可同時被地區／主題查詢撈到。
+            前台入口分類，可複選、彼此不互斥。「國外團體」「主題旅遊」沿用上方地區／主題標籤自動分組呈現；「精緻璽品」「美安專區」為人工策展列表，行程仍可同時被地區／主題查詢撈到。
           </p>
         </div>
         <div className="flex flex-wrap gap-7">
@@ -667,6 +686,15 @@ export default function BasicInfoSection({
         <p className="text-sm font-bold leading-[1.45em] text-[#0053E0]">{generatedDaysSummary}</p>
       </div>
       {notice && <AdminToast message={notice} variant="warning" onClose={closeNotice} />}
+      {pendingRemoval && (
+        <AdminConfirmDialog
+          title={`移除${pendingRemoval.kind === "statuses" ? "行程狀態" : "卡片標章"}「${pendingRemoval.label}」？`}
+          message="按「儲存變更」後會從選項中移除，已套用此項目的行程也會一併清除。"
+          confirmLabel="移除"
+          onConfirm={removeOption}
+          onCancel={() => setPendingRemoval(null)}
+        />
+      )}
     </section>
   );
 }

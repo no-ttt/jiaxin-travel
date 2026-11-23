@@ -204,9 +204,11 @@ export default function TourCarousel({
         {moreHref && (
           <Link
             href={moreHref}
-            className="hidden h-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#E0E3E8] px-[18px] text-sm font-medium text-[#002366] transition hover:bg-slate-50 sm:flex"
+            // mr-4 matches the carousel's px-4 inset so the button lines up with the cards' right edge.
+            className="mr-4 hidden h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#E0E3E8] px-[18px] text-sm font-medium text-[#002366] transition hover:bg-slate-50 sm:flex"
           >
             查看更多
+            <Image src="/images/arrow-right-icon.svg" alt="" width={14} height={14} />
           </Link>
         )}
       </div>

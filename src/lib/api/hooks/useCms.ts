@@ -2,12 +2,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cmsApi } from "../endpoints/cms";
 import type { Homepage } from "../types/cms";
 
+/**
+ * Site-wide 後台 content (首頁、選單、頁尾、訂購流程) is shared by every component through this cache
+ * and never goes stale on a timer; SiteContentRefresher (app/providers.tsx) re-checks it on each
+ * in-site page change, and a reload always gets the latest from the server render.
+ */
+const SITE_CONTENT_STALE_TIME = Infinity;
+
 /** `initialData` is the server-rendered copy; without it (API was down on the server) the browser fetches. */
 export function useHomepage(initialData?: Homepage) {
   return useQuery({
     queryKey: ["public", "homepage"],
     queryFn: () => cmsApi.homepage(),
-    staleTime: 60_000,
+    staleTime: SITE_CONTENT_STALE_TIME,
     initialData,
   });
 }
@@ -16,7 +23,7 @@ export function useNavigation() {
   return useQuery({
     queryKey: ["public", "navigation"],
     queryFn: () => cmsApi.navigation(),
-    staleTime: 60_000,
+    staleTime: SITE_CONTENT_STALE_TIME,
   });
 }
 
@@ -24,7 +31,7 @@ export function useFooter() {
   return useQuery({
     queryKey: ["public", "footer"],
     queryFn: () => cmsApi.footer(),
-    staleTime: 60_000,
+    staleTime: SITE_CONTENT_STALE_TIME,
   });
 }
 
@@ -33,7 +40,7 @@ export function usePurchaseFlow() {
   return useQuery({
     queryKey: ["public", "purchase-flow"],
     queryFn: () => cmsApi.purchaseFlow(),
-    staleTime: 60_000,
+    staleTime: SITE_CONTENT_STALE_TIME,
   });
 }
 

@@ -18,7 +18,7 @@ export default function TrustCredentials() {
     <section className="bg-[#F6F6F6] px-4 py-14 sm:px-8 sm:py-16 lg:px-[120px] lg:py-20">
       <div className="mx-auto flex w-full max-w-[1200px] flex-col items-center gap-10 lg:flex-row lg:justify-between lg:gap-16">
         <div className="relative w-full max-w-[420px] pb-6 pl-6">
-          <div className="absolute bottom-0 left-0 h-[167px] w-[384px] rounded-3xl bg-[#DBE8FF]" />
+          <div className="absolute bottom-0 left-0 right-6 h-[167px] max-w-[384px] rounded-3xl bg-[#DBE8FF]" />
           <div className="relative flex h-[167px] w-full max-w-[384px] flex-col justify-center gap-3 rounded-3xl bg-white px-8 py-6 shadow-[0px_16px_36px_0px_rgba(5,15,31,0.1)]">
             <svg width="24" height="18" viewBox="0 0 24 18" fill="none" className="text-[#0053E0]">
               <path

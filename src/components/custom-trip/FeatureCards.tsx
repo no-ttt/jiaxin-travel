@@ -98,7 +98,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
 
 export default function FeatureCards() {
   return (
-    <section className="flex flex-col items-center gap-16 px-4 pb-10 pt-0 -mt-40 sm:px-8 lg:px-[120px] lg:pb-10 lg:pt-0">
+    <section className="flex flex-col items-center gap-16 px-4 pb-10 pt-0 sm:px-8 lg:-mt-40 lg:px-[120px] lg:pb-10 lg:pt-0">
       <div className="flex max-w-[760px] flex-col items-center gap-2 text-center">
         <span className="text-xs font-semibold tracking-[0.1833em] text-[#0053E0]">
           WHY TRAVEL WITH US

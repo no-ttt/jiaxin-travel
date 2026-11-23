@@ -13,8 +13,9 @@ export default function AdminPageHeader({
   onSave,
   saveDisabled = false,
 }: AdminPageHeaderProps) {
+  // Stays pinned while scrolling so 儲存變更 is always reachable (bg hides the content scrolling under it).
   return (
-    <div className="flex items-center justify-between">
+    <div className="sticky top-0 z-30 -mb-4 -mt-6 flex items-center justify-between bg-[#FAFAFA] pb-4 pt-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-[28px] font-bold leading-[1.45em] text-[#090909]">{title}</h1>
         <p className="text-sm font-medium leading-[1.45em] text-[#535F71]">{description}</p>

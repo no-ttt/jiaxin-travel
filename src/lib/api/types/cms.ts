@@ -161,10 +161,17 @@ export type NavTheme = {
   collection_id: number;
 };
 
+/** 精緻璽品子分類 (visible ones only); links to /search?zone=premium&premium_subcategory_id=. */
+export type NavPremiumSubcategory = {
+  id: number;
+  name: string;
+};
+
 export type Navigation = {
   categories: NavCategoryPublic[];
   regions: NavRegion[];
   themes: NavTheme[];
+  premium_subcategories: NavPremiumSubcategory[];
 };
 
 export type FooterLink = {
@@ -228,7 +235,10 @@ export type VisaNoticeDoc = {
 
 export type VisaDownloadDoc = VisaDownload & {
   title: string;
+  /** Plain-text copy of description_html (what the backend stores today; max 500 chars). */
   description: string;
+  /** 文件說明 rich text. Not in the backend yet — falls back to `description` when absent. */
+  description_html?: string;
 };
 
 /** 「查看詳情」drawer: 需備資料 / 辦證須知 / 文件下載 tabs. */
@@ -243,6 +253,8 @@ export type VisaServiceDetail = {
    * `notice_docs`); not shown, round-tripped unchanged. */
   notice_html: string;
   downloads_visible: boolean;
+  /** 文件下載 block title. Not in the backend yet — the tab label is shown when absent. */
+  downloads_title?: string;
   downloads: VisaDownloadDoc[];
 };
 
@@ -285,6 +297,19 @@ export type FraudNoticePage = {
   page_title: string;
   intro_html: string;
   sections: ContentPageSection[];
+};
+
+/**
+ * keys `cancellation-policy` (取消／退訂規定) and `announcements` (聲明公告專區).
+ * The first 4 sections are the defaults (hide-only in the admin); later ones are admin-added.
+ * `visible` exists on the admin doc only: the public endpoint drops hidden sections and the flag.
+ */
+export type PolicySection = ContentPageSection & { visible?: boolean };
+
+export type PolicyPage = {
+  page_title: string;
+  intro_html: string;
+  sections: PolicySection[];
 };
 
 /** key `contract` — 旅遊契約書. */

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { colorListMarkers } from "@/lib/listMarkerColor";
 import type { TripDetail } from "./types";
 
 export default function DecisionInfo({ trip }: { trip: TripDetail }) {
@@ -58,14 +59,21 @@ export default function DecisionInfo({ trip }: { trip: TripDetail }) {
             </div>
           </div>
 
-          <ul className="flex flex-col gap-0.5 pt-3">
-            {trip.highlights.map((highlight) => (
-              <li key={highlight} className="flex items-center gap-1 text-[15px] text-[#333]">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#0053E0]" />
-                {highlight}
-              </li>
-            ))}
-          </ul>
+          {trip.highlightsHtml && trip.highlights.length > 0 ? (
+            <div
+              className="trip-highlights pt-3 text-[15px] leading-[1.6] text-[#333]"
+              dangerouslySetInnerHTML={{ __html: colorListMarkers(trip.highlightsHtml) }}
+            />
+          ) : trip.highlights.length > 0 && (
+            <ul className="flex flex-col gap-0.5 pt-3">
+              {trip.highlights.map((highlight, index) => (
+                <li key={`${index}-${highlight}`} className="flex items-center gap-1 text-[15px] text-[#333]">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#0053E0]" />
+                  {highlight}
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div className="flex flex-1 items-end justify-end gap-5 pr-4 pt-4">
             <div className="flex items-center gap-2">

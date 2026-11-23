@@ -3,6 +3,7 @@ import type { TaxonomyOption } from "@/lib/api/types/taxonomy";
 import type { PublicTripDetail, PublicTripImage } from "@/lib/api/types/trip";
 import { toDaysPayload, toFlightsPayload, type EditableImage } from "./content";
 import type { PreviewDraft } from "./preview-draft";
+import { htmlToHighlights } from "./form";
 
 export type PreviewLookups = {
   /** Media records by id; images not loaded yet are left out until they arrive. */
@@ -64,6 +65,8 @@ export function toPreviewTrip(draft: PreviewDraft, lookups: PreviewLookups): Pub
     seo: { title: form.seo_title, description: "", og_image: null },
     service_tags: form.service_tags_visible ? form.service_tags : [],
     cover_headline: form.cover_headline,
+    highlights: htmlToHighlights(form.highlights_html),
+    highlights_html: form.highlights_html,
     departure_date: form.base_departure_date,
     deposit_per_person: form.deposit_per_person,
     cta: isExternal ? "external" : "inquiry",
@@ -103,6 +106,9 @@ export function toPreviewTrip(draft: PreviewDraft, lookups: PreviewLookups): Pub
     // The public API only returns visible tabs.
     notice_tabs: content.noticeTabs
       .filter((tab) => tab.visible)
-      .map(({ title, body_html }) => ({ title, body_html })),
+      .map(({ title, cards }) => ({
+        title,
+        cards: cards.filter((card) => card.visible).map(({ title: t, body_html }) => ({ title: t, body_html })),
+      })),
   };
 }

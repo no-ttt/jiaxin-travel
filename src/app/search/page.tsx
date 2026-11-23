@@ -9,13 +9,18 @@ import CompactSearchBar, { type SearchQuery } from "@/components/search/CompactS
 import SearchSummary, { type SortOption } from "@/components/search/SearchSummary";
 import FilterPanel from "@/components/search/FilterPanel";
 import TripResultCard, { type TripResult } from "@/components/search/TripResultCard";
-import { buildSearchHref, parseSearchParams, toApiParams } from "@/components/search/searchUrl";
+import {
+  buildSearchHref,
+  parseSearchParams,
+  toApiParams,
+  type SearchUrlState,
+} from "@/components/search/searchUrl";
 import { useNavigation } from "@/lib/api/hooks/useCms";
 import { usePublicTripSearch } from "@/lib/api/hooks/useTrips";
 import type { PublicTripCard } from "@/lib/api/types/trip";
 import Pagination from "@/components/search/Pagination";
 import CustomTripCta from "@/components/search/CustomTripCta";
-import { filtersToApiParams } from "@/components/search/filters";
+import { codesToLabels, filtersToApiParams, labelsToCodes } from "@/components/search/filters";
 import FloatingActions from "@/components/FloatingActions";
 
 const RESULTS_PER_PAGE = 6;
@@ -55,7 +60,7 @@ function Spinner() {
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Applied criteria live in the URL, so refresh / shared links keep the search.
+  // Everything applied (search bar, filters, sort, page) lives in the URL, so refresh / shared links / back keep it.
   const applied = useMemo(
     () => parseSearchParams(new URLSearchParams(searchParams.toString())),
     [searchParams]
@@ -67,68 +72,69 @@ function SearchPageContent() {
     startDate: applied.dateFrom,
     endDate: applied.dateTo,
   });
-  const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set());
-  const [sort, setSort] = useState<SortOption>("popular");
-  const [page, setPage] = useState(1);
+  const selectedFilters = useMemo(() => codesToLabels(applied.filters), [applied.filters]);
+  const { sort, page } = applied;
 
-  // A new URL (e.g. arriving from the homepage) refills the bar and restarts at page 1.
-  const [prevApplied, setPrevApplied] = useState(applied);
-  if (applied !== prevApplied) {
-    setPrevApplied(applied);
+  // New search-bar values in the URL (e.g. arriving from the homepage, back/forward) refill the bar.
+  // Filter / sort / page changes leave it alone, so text typed but not yet searched isn't wiped.
+  const barKey = [applied.destination, applied.keyword, applied.dateFrom, applied.dateTo].join("\u0000");
+  const [prevBarKey, setPrevBarKey] = useState(barKey);
+  if (barKey !== prevBarKey) {
+    setPrevBarKey(barKey);
     setQuery({
       destination: applied.destination,
       keyword: applied.keyword,
       startDate: applied.dateFrom,
       endDate: applied.dateTo,
     });
-    setPage(1);
   }
+
+  // push (not replace): each search / filter / sort / page change is a history entry, so 上一頁 steps back through them.
+  const updateUrl = (patch: Partial<SearchUrlState>) => {
+    router.push(buildSearchHref({ ...applied, ...patch }), { scroll: false });
+  };
 
   const { data: navigation, isLoading: isNavLoading } = useNavigation();
   const params = {
-    ...toApiParams(applied, navigation?.regions ?? []),
-    ...filtersToApiParams(selectedFilters),
+    ...toApiParams(applied, navigation?.regions ?? [], navigation?.premium_subcategories ?? []),
+    ...filtersToApiParams(applied.filters),
     sort: SORT_TO_API[sort],
     page,
     limit: RESULTS_PER_PAGE,
   };
-  // Region matching needs the navigation regions; wait for them when a destination is set.
-  const { data, isFetching, isError } = usePublicTripSearch(params, {
-    enabled: !(applied.destination && isNavLoading),
-  });
+  // Region／subcategory matching needs the navigation; wait for it when there is text to match.
+  const needsNavigation = Boolean(applied.destination || applied.keyword) && isNavLoading;
+  const { data, isFetching, isError } = usePublicTripSearch(params, { enabled: !needsNavigation });
   // Previous results stay on screen while a new filter / page loads, so show a spinner over them.
-  const isSearching = isFetching || Boolean(applied.destination && isNavLoading);
+  const isSearching = isFetching || needsNavigation;
   const results = (data?.items ?? []).map(toTripResult);
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / RESULTS_PER_PAGE));
 
   const themeName = navigation?.themes.find((t) => t.id === applied.themeId)?.name;
+  const premiumSubcategoryName = navigation?.premium_subcategories?.find(
+    (sub) => sub.id === applied.premiumSubcategoryId,
+  )?.name;
   const summaryLabel =
-    [applied.destination, applied.keyword, themeName].filter(Boolean).join("・") ||
+    [applied.destination, applied.keyword, themeName, premiumSubcategoryName].filter(Boolean).join("・") ||
     (applied.zone ? ZONE_LABELS[applied.zone] : "") ||
     "全部行程";
 
   const toggleFilter = (option: string) => {
-    setSelectedFilters((prev) => {
-      const next = new Set(prev);
-      if (next.has(option)) next.delete(option);
-      else next.add(option);
-      return next;
-    });
-    setPage(1);
+    const next = new Set(selectedFilters);
+    if (next.has(option)) next.delete(option);
+    else next.add(option);
+    updateUrl({ filters: labelsToCodes(next), page: 1 });
   };
 
   const handleSearch = () => {
-    router.replace(
-      buildSearchHref({
-        ...applied,
-        destination: query.destination,
-        keyword: query.keyword,
-        dateFrom: query.startDate,
-        dateTo: query.endDate,
-      }),
-      { scroll: false }
-    );
+    updateUrl({
+      destination: query.destination,
+      keyword: query.keyword,
+      dateFrom: query.startDate,
+      dateTo: query.endDate,
+      page: 1,
+    });
   };
 
   return (
@@ -155,20 +161,14 @@ function SearchPageContent() {
             activeFilters={Array.from(selectedFilters)}
             onRemoveFilter={toggleFilter}
             sort={sort}
-            onSortChange={(next) => {
-              setSort(next);
-              setPage(1);
-            }}
+            onSortChange={(next: SortOption) => updateUrl({ sort: next, page: 1 })}
           />
 
           <div className="flex flex-col gap-7 lg:flex-row lg:items-start">
             <FilterPanel
               selected={selectedFilters}
               onToggle={toggleFilter}
-              onClear={() => {
-                setSelectedFilters(new Set());
-                setPage(1);
-              }}
+              onClear={() => updateUrl({ filters: labelsToCodes(new Set()), page: 1 })}
             />
             <div className="relative flex min-w-0 flex-1 flex-col gap-4" aria-busy={isSearching}>
               {isSearching && results.length > 0 && (
@@ -203,7 +203,7 @@ function SearchPageContent() {
                 </div>
               )}
               {results.length > 0 && (
-                <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+                <Pagination page={page} pageCount={pageCount} onPageChange={(next) => updateUrl({ page: next })} />
               )}
             </div>
           </div>
