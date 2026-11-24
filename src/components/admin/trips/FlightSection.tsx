@@ -3,7 +3,7 @@
 import { generateId } from "@/components/admin/ui/generateId";
 import AdminDateField from "./AdminDateField";
 import AdminSelect from "./AdminSelect";
-import type { EditableFlightRow, EditableFlights } from "./content";
+import { isInvalidFlightTime, type EditableFlightRow, type EditableFlights } from "./content";
 
 type FlightRow = EditableFlightRow;
 
@@ -23,10 +23,13 @@ function CellInput({
   value,
   onChange,
   placeholder,
+  invalid = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  /** Red border (after a save was blocked by this cell); clears once the value is fixed. */
+  invalid?: boolean;
 }) {
   return (
     <input
@@ -34,7 +37,11 @@ function CellInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`h-9 w-full min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-sm font-medium leading-[1.45em] text-[#090909] outline-none placeholder:text-[#B4BED1] hover:border-[#E0E3E8] focus:border-[#0053E0] focus:bg-white`}
+      aria-invalid={invalid || undefined}
+      data-invalid={invalid || undefined}
+      className={`h-9 w-full min-w-0 rounded-lg border bg-transparent px-2 text-sm font-medium leading-[1.45em] text-[#090909] outline-none placeholder:text-[#B4BED1] focus:bg-white ${
+        invalid ? "border-[#D92D20]" : "border-transparent hover:border-[#E0E3E8] focus:border-[#0053E0]"
+      }`}
     />
   );
 }
@@ -44,11 +51,14 @@ export default function FlightSection({
   description,
   value,
   onChange,
+  showErrors = false,
 }: {
   title: string;
   description: string;
   value: EditableFlights;
   onChange: (updater: (prev: EditableFlights) => EditableFlights) => void;
+  /** Set after a save was blocked: invalid times get a red border. */
+  showErrors?: boolean;
 }) {
   const { note, rows: flights } = value;
   const setNote = (next: string) => onChange((prev) => ({ ...prev, note: next }));
@@ -155,6 +165,7 @@ export default function FlightSection({
                 value={flight.depart_time}
                 onChange={(v) => updateFlight(flight._id, { depart_time: v })}
                 placeholder="23:05"
+                invalid={showErrors && isInvalidFlightTime(flight.depart_time)}
               />
               <CellInput
                 value={flight.depart_city}
@@ -165,6 +176,7 @@ export default function FlightSection({
                 value={flight.arrive_time}
                 onChange={(v) => updateFlight(flight._id, { arrive_time: v })}
                 placeholder="08:00"
+                invalid={showErrors && isInvalidFlightTime(flight.arrive_time)}
               />
               <div className="min-w-0">
                 <AdminSelect

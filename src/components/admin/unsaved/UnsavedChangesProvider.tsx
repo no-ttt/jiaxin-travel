@@ -12,15 +12,21 @@ type UnsavedChangesContextValue = {
 
 const UnsavedChangesContext = createContext<UnsavedChangesContextValue | null>(null);
 
+/** Marks the extra same-URL history entry that lets the browser's 上一頁 be intercepted. */
+const GUARD_KEY = "__unsavedGuard";
+const isOnGuardEntry = () => Boolean((window.history.state as Record<string, unknown> | null)?.[GUARD_KEY]);
+
 /**
  * Warns before leaving an admin page with unsaved changes: closing/reloading the tab (browser prompt),
- * clicking any in-app link, or actions that navigate away (via `confirmLeave`).
+ * clicking any in-app link, the browser's 上一頁, or actions that navigate away (via `confirmLeave`).
  */
 export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [dirtyIds, setDirtyIds] = useState<ReadonlySet<string>>(new Set());
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  // Run when the dialog is dismissed with「留在此頁」(the 上一頁 case re-arms its history guard).
+  const onStayRef = useRef<(() => void) | null>(null);
   const isDirty = dirtyIds.size > 0;
   // Read by the document listeners without re-subscribing on every change.
   const isDirtyRef = useRef(isDirty);
@@ -47,6 +53,8 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isDirty) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Already confirmed in our own dialog (e.g. 上一頁 to another site): don't ask twice.
+      if (!isDirtyRef.current) return;
       event.preventDefault();
       event.returnValue = "";
     };
@@ -74,6 +82,44 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("click", onClick, true);
   }, [router]);
 
+  // Browser 上一頁: popstate can't be cancelled, so while there are unsaved changes an extra entry
+  // with the same URL sits on top of the page's own. 上一頁 then only pops that guard (the page stays
+  // put) and we ask first:「離開」goes back for real,「留在此頁」puts the guard back.
+  const onGuardRef = useRef(false);
+  const guardUrlRef = useRef<string | null>(null);
+  const pushGuard = useCallback(() => {
+    window.history.pushState({ ...(window.history.state ?? {}), [GUARD_KEY]: true }, "", window.location.href);
+    onGuardRef.current = true;
+    guardUrlRef.current = window.location.href;
+  }, []);
+
+  useEffect(() => {
+    if (isDirty && !isOnGuardEntry()) pushGuard();
+  }, [isDirty, pushGuard]);
+
+  useEffect(() => {
+    // After any navigation (router push, back/forward), note whether we landed on a guard entry.
+    onGuardRef.current = isOnGuardEntry();
+    if (onGuardRef.current) guardUrlRef.current = window.location.href;
+  }, [pathname]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const leftGuard = onGuardRef.current && !isOnGuardEntry() && window.location.href === guardUrlRef.current;
+      onGuardRef.current = isOnGuardEntry();
+      if (!leftGuard) return;
+      if (isDirtyRef.current) {
+        onStayRef.current = pushGuard;
+        setPendingAction(() => () => window.history.back());
+      } else {
+        // Saved since the guard was added: skip the duplicate entry so one 上一頁 is enough.
+        window.history.back();
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [pushGuard]);
+
   // A new page starts clean (its editors register themselves again).
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (pathname !== prevPathname) {
@@ -96,12 +142,17 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
           onConfirm={() => {
             const action = pendingAction;
             setPendingAction(null);
+            onStayRef.current = null;
             // Leaving on purpose: drop the flags so the browser prompt doesn't fire as well.
             isDirtyRef.current = false;
             setDirtyIds(new Set());
             action();
           }}
-          onCancel={() => setPendingAction(null)}
+          onCancel={() => {
+            setPendingAction(null);
+            onStayRef.current?.();
+            onStayRef.current = null;
+          }}
         />
       )}
     </UnsavedChangesContext.Provider>

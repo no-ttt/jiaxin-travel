@@ -156,6 +156,9 @@ export const toNoticeTabsPayload = (tabs: EditableNoticeTab[]): NoticeTabIn[] =>
 
 const TIME_PATTERN = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
+/** A filled-in flight time that isn't HH:MM (blank is allowed). */
+export const isInvalidFlightTime = (time: string) => Boolean(time) && !TIME_PATTERN.test(time);
+
 /** Returns an error message for the first invalid flight time, or null. */
 export function validateFlights(flights: EditableFlights): string | null {
   for (const [index, row] of flights.rows.entries()) {
@@ -163,7 +166,7 @@ export function validateFlights(flights: EditableFlights): string | null {
       ["起飛", row.depart_time],
       ["抵達", row.arrive_time],
     ] as const) {
-      if (time && !TIME_PATTERN.test(time)) {
+      if (isInvalidFlightTime(time)) {
         return `第 ${index + 1} 筆航班的${label}時間「${time}」格式錯誤，請輸入 HH:MM，例如 23:05`;
       }
     }
@@ -172,7 +175,7 @@ export function validateFlights(flights: EditableFlights): string | null {
 }
 
 /** Rich text with no visible text (e.g. "<p><br></p>", "&nbsp;"). */
-const isBlankHtml = (html: string) =>
+export const isBlankHtml = (html: string) =>
   !html
     .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;|\u00a0/g, " ")

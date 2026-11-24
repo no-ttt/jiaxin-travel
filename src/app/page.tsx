@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import HomeView from "@/components/home/HomeView";
 import { getHomepage } from "@/lib/api/server";
+import { pageMetadata } from "@/lib/seo";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({ path: "/" });
+}
 
 export default async function Home() {
   // Rendered on the server and cached under the 'cms' tag; the backend revalidates it on save.

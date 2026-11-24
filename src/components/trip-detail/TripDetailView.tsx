@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
@@ -62,12 +63,30 @@ export default function TripDetailView({
             <p className="text-sm text-[#535F71]">
               {failed ? "請稍後重新整理頁面。" : "行程可能已下架，或網址有誤。"}
             </p>
+            {!failed && (
+              // Same ways out as the site-wide 404 page.
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/"
+                  className="flex h-[42px] items-center justify-center rounded-xl bg-[#0053E0] px-6 text-base font-bold text-white transition hover:bg-[#0044b8]"
+                >
+                  回到首頁
+                </Link>
+                <Link
+                  href="/search"
+                  className="flex h-[42px] items-center justify-center rounded-xl border border-[#E0E3E8] bg-white px-6 text-base font-bold text-[#002366] transition hover:bg-[#F6F6F6]"
+                >
+                  搜尋行程
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </main>
 
       <Footer />
-      <StickySideAnchor />
+      {/* The section anchors have nothing to jump to without a trip. */}
+      {trip && <StickySideAnchor />}
       <FloatingActions />
     </div>
   );

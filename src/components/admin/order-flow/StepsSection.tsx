@@ -10,6 +10,9 @@ import type { OrderFlowStep } from "./data";
 /** The backend rejects more than 5 steps (422 "List should have at most 5 items"). */
 const MAX_STEPS = 5;
 
+/** Steps are named by their current position, so deleting one renumbers the rest. */
+const stepLabel = (index: number) => `步驟 ${index + 1}`;
+
 export default function StepsSection({
   steps,
   onStepsChange,
@@ -19,7 +22,8 @@ export default function StepsSection({
 }) {
   const [activeStepId, setActiveStepId] = useState(steps[0]?.id ?? "");
 
-  const activeStep = steps.find((s) => s.id === activeStepId) ?? steps[0];
+  const activeIndex = Math.max(0, steps.findIndex((s) => s.id === activeStepId));
+  const activeStep = steps[activeIndex];
 
   const updateStep = (id: string, patch: Partial<OrderFlowStep>) => {
     onStepsChange(steps.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -35,7 +39,6 @@ export default function StepsSection({
     if (steps.length >= MAX_STEPS) return;
     const newStep: OrderFlowStep = {
       id: generateId("step"),
-      label: `步驟 ${steps.length + 1}`,
       visible: true,
       title: "",
       content: "",
@@ -71,8 +74,8 @@ export default function StepsSection({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {steps.map((step) => {
-            const active = step.id === activeStepId;
+          {steps.map((step, index) => {
+            const active = step.id === activeStep?.id;
             return (
               <div
                 key={step.id}
@@ -87,13 +90,13 @@ export default function StepsSection({
                     active ? "font-bold text-[#0053E0]" : "font-medium text-[#090909]"
                   }`}
                 >
-                  {step.label}
+                  {stepLabel(index)}
                 </button>
                 <ToggleSwitch
                   size="sm"
                   checked={step.visible}
                   onChange={() => updateStep(step.id, { visible: !step.visible })}
-                  label={`切換${step.label}顯示於前台`}
+                  label={`切換${stepLabel(index)}顯示於前台`}
                 />
               </div>
             );
@@ -105,7 +108,7 @@ export default function StepsSection({
         <div className="flex flex-col gap-4 rounded-[14px] border border-[#E0E3E8] bg-white p-[18px]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">
-              目前編輯：{activeStep.label}
+              目前編輯：{stepLabel(activeIndex)}
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs leading-[1.45em] text-[#535F71]">切換上方步驟即可編輯其他內容</span>

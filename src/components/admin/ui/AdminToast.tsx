@@ -27,15 +27,17 @@ const VARIANT_STYLES = {
 export default function AdminToast({
   message,
   onClose,
-  duration = 2500,
+  duration,
   variant = "success",
 }: AdminToastProps) {
+  // Warnings explain why something was blocked, so they stay up long enough to read.
+  const shownFor = duration ?? (variant === "warning" ? 5000 : 2500);
   const styles = VARIANT_STYLES[variant];
 
   useEffect(() => {
-    const timer = setTimeout(onClose, duration);
+    const timer = setTimeout(onClose, shownFor);
     return () => clearTimeout(timer);
-  }, [onClose, duration]);
+  }, [onClose, shownFor]);
 
   return (
     <div className={`fixed left-1/2 top-8 z-50 flex -translate-x-1/2 items-center gap-2.5 rounded-xl border ${styles.box} px-5 py-3.5 shadow-[0px_12px_32px_-8px_rgba(13,20,38,0.18)]`}>

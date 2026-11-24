@@ -61,6 +61,8 @@ export type PublicCollection = {
   total: number;
   page: number;
   items: PublicTripCard[];
+  /** Regions that have at least one trip in this collection (unaffected by the current filters). */
+  available_regions: { id: number; name: string }[];
 };
 
 /** limit ≤ 48. The collection endpoint also filters by region / departure month / duration and sorts. */

@@ -21,8 +21,11 @@ import {
 export default function LuxurySubcategoriesSection({
   value: subcategories,
   onChange,
+  submenuEnabled,
 }: {
   value: PremiumSubcategoryDraft[];
+  /** 「精緻璽品」子選單開關 (in 側欄分類 above); the off-state note only shows while it is off. */
+  submenuEnabled: boolean;
   onChange: (
     updater: (prev: PremiumSubcategoryDraft[]) => PremiumSubcategoryDraft[],
   ) => void;
@@ -169,7 +172,7 @@ export default function LuxurySubcategoriesSection({
 
         </>
       )}
-      {!collapsed && (
+      {!collapsed && !submenuEnabled && (
         <AdminInfoNote icon={false}>
           此區塊會在上方「精緻璽品」的子選單開關開啟後於前台生效；目前開關為關閉狀態，此處僅預覽日後新增子分類的位置。
         </AdminInfoNote>

@@ -6,7 +6,7 @@ import { generateId } from "@/components/admin/ui/generateId";
 import RichTextEditor from "./RichTextEditor";
 import RowActionButton from "./RowActionButton";
 import { AddImageTile, TripImagePreview, useImageReorder } from "./TripImageTiles";
-import { moveById, type EditableFeatureCard } from "./content";
+import { isBlankHtml, moveById, type EditableFeatureCard } from "./content";
 
 type HighlightCard = EditableFeatureCard;
 
@@ -18,11 +18,14 @@ export default function HighlightsSection({
   description,
   value: cards,
   onChange: setCards,
+  showErrors = false,
 }: {
   title: string;
   description: string;
   value: HighlightCard[];
   onChange: (updater: (prev: HighlightCard[]) => HighlightCard[]) => void;
+  /** Set after a save was blocked: an empty 卡面標題／內容 gets a red border. */
+  showErrors?: boolean;
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -233,7 +236,11 @@ export default function HighlightsSection({
                   type="text"
                   value={card.title}
                   onChange={(e) => updateCard(card._id, { title: e.target.value })}
-                  className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none focus:border-[#0053E0]"
+                  aria-invalid={(showErrors && !card.title.trim()) || undefined}
+                  data-invalid={(showErrors && !card.title.trim()) || undefined}
+                  className={`h-11 w-full rounded-xl border bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none ${
+                    showErrors && !card.title.trim() ? "border-[#D92D20]" : "border-[#E0E3E8] focus:border-[#0053E0]"
+                  }`}
                 />
               </div>
 
@@ -242,6 +249,7 @@ export default function HighlightsSection({
                 <RichTextEditor
                   value={card.body_html}
                   onChange={(html) => updateCard(card._id, { body_html: html })}
+                  invalid={showErrors && isBlankHtml(card.body_html)}
                   placeholder="輸入卡面內容，可使用粗體、條列、連結等格式。內容會依卡面順序顯示於行程特色區塊。"
                 />
                 <p className="text-xs leading-[1.45em] text-[#535F71]">

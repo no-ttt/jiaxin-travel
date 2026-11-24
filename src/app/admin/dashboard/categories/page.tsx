@@ -186,6 +186,7 @@ export default function AdminCategoriesPage() {
           <LuxurySubcategoriesSection
             value={draft.premiumSubcategories}
             onChange={updateField("premiumSubcategories")}
+            submenuEnabled={draft.categories.find((cat) => cat.key === "premium")?.submenuEnabled ?? false}
           />
           <ThemeSubcategoriesSection value={draft.themes} onChange={updateField("themes")} />
         </>

@@ -109,5 +109,3 @@ export const TRIP_KIND_STYLE: Record<TripKind, string> = {
   external: "bg-[#EDEEF0] text-[#535F71]",
 };
 
-/** Filter groups the API accepts only one value for. */
-export const SINGLE_VALUE_FILTERS: FilterGroupKey[] = ["zone", "kind", "status", "days"];

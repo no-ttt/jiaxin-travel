@@ -16,8 +16,10 @@ export type TripCreateResponse = {
   trip_code: string;
 };
 
-/** PATCH /admin/trips/{id}. `trip_type` and `trip_code` cannot be changed after creation. */
+/** PATCH /admin/trips/{id}. `trip_code` cannot be changed after creation. */
 export type TripUpdate = Partial<{
+  /** Switched in place: trip code, publish status and zones stay as they are. */
+  trip_type: TripType;
   cover_media_id: string | null;
   product_name: string | null;
   product_description: string | null;
@@ -31,6 +33,8 @@ export type TripUpdate = Partial<{
   duration_days: number | null;
   duration_nights: number | null;
   seo_title: string | null;
+  /** 站內搜尋關鍵字（僅後台）；backend trims, de-duplicates and drops blanks. */
+  search_keywords: string[] | null;
   price_from: number | null;
   currency: string | null;
   departure_months: number[] | null;
@@ -186,6 +190,7 @@ export type TripDetail = {
   };
   basic: {
     seo_title: string;
+    search_keywords: string[];
     price_from: number | null;
     currency: string;
     departure_months: number[];
@@ -215,10 +220,12 @@ export type TripListFilters = Partial<{
   keyword: string;
   region_ids: number[];
   theme_ids: number[];
-  zone: TripZone;
-  trip_type: TripType;
-  publish_status: PublishStatus;
-  duration_band: string;
+  /** Multi-value groups below are sent as repeated params and OR-ed by the backend. */
+  zone: TripZone[];
+  trip_type: TripType[];
+  publish_status: PublishStatus[];
+  /** "1-5" | "6-10" | "11+" */
+  duration_band: string[];
   sort: string;
   page: number;
   limit: number;

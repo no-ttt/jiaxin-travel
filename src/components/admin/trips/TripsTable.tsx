@@ -14,7 +14,6 @@ import FilterDropdown from "./FilterDropdown";
 import RowActionsMenu from "./RowActionsMenu";
 import {
   FILTER_GROUPS,
-  SINGLE_VALUE_FILTERS,
   TRIP_KIND_LABEL,
   TRIP_KIND_STYLE,
   TRIP_STATUS_LABEL,
@@ -92,11 +91,11 @@ export default function TripsTable() {
     keyword: searchTerm.trim() || undefined,
     region_ids: filters.region.map(Number),
     theme_ids: filters.theme.map(Number),
-    zone: (filters.zone[0] as TripZone | undefined) ?? undefined,
-    trip_type: (filters.kind[0] as TripType | undefined) ?? undefined,
-    publish_status: (filters.status[0] as PublishStatus | undefined) ?? undefined,
-    // Backend bands are 1-5 / 6-10 / 11-15 / 15+; there is no "11+" yet, so use 11-15 for now.
-    duration_band: filters.days[0] === "11+" ? "11-15" : (filters.days[0] ?? undefined),
+    // Each group is OR-ed by the backend (repeated params, e.g. ?zone=premium&zone=meian).
+    zone: filters.zone as TripZone[],
+    trip_type: filters.kind as TripType[],
+    publish_status: filters.status as PublishStatus[],
+    duration_band: filters.days,
     sort: toApiSort(sort),
     page,
     limit: pageSize,
@@ -176,13 +175,7 @@ export default function TripsTable() {
   }, [pageSizeOpen]);
 
   const setFilterGroup = (key: FilterGroupKey, values: string[]) => {
-    setFilters((prev) => {
-      // The API takes a single value for these groups: keep only the newest pick.
-      const next = SINGLE_VALUE_FILTERS.includes(key)
-        ? values.filter((v) => !prev[key].includes(v)).slice(-1)
-        : values;
-      return { ...prev, [key]: next };
-    });
+    setFilters((prev) => ({ ...prev, [key]: values }));
     setPage(1);
   };
 
@@ -228,8 +221,13 @@ export default function TripsTable() {
       {/* Filter Bar */}
       <div className="flex w-full flex-col gap-4 rounded-2xl border border-[#E0E3E8] bg-white p-4">
         <div className="flex w-full flex-wrap items-center gap-2.5">
-          <div className="flex w-[240px] items-center gap-2 rounded-lg border border-[#E0E3E8] px-3 py-2 pr-3.5">
-            <span className="text-[#535F71]">🔍</span>
+          <div className="flex w-[240px] items-center gap-2 rounded-lg border border-[#E0E3E8] px-3 py-2 pr-3.5 text-[13px] leading-[1.45em]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
+              <path
+                d="M19.6 21L13.3 14.7C12.8 15.1 12.225 15.4167 11.575 15.65C10.925 15.8833 10.2333 16 9.5 16C7.68333 16 6.14583 15.3708 4.8875 14.1125C3.62917 12.8542 3 11.3167 3 9.5C3 7.68333 3.62917 6.14583 4.8875 4.8875C6.14583 3.62917 7.68333 3 9.5 3C11.3167 3 12.8542 3.62917 14.1125 4.8875C15.3708 6.14583 16 7.68333 16 9.5C16 10.2333 15.8833 10.925 15.65 11.575C15.4167 12.225 15.1 12.8 14.7 13.3L21 19.6L19.6 21ZM9.5 14C10.75 14 11.8125 13.5625 12.6875 12.6875C13.5625 11.8125 14 10.75 14 9.5C14 8.25 13.5625 7.1875 12.6875 6.3125C11.8125 5.4375 10.75 5 9.5 5C8.25 5 7.1875 5.4375 6.3125 6.3125C5.4375 7.1875 5 8.25 5 9.5C5 10.75 5.4375 11.8125 6.3125 12.6875C7.1875 13.5625 8.25 14 9.5 14Z"
+                fill="#535F71"
+              />
+            </svg>
             <input
               type="text"
               value={searchTerm}
@@ -307,29 +305,32 @@ export default function TripsTable() {
             </div>
           ))}
         </div>
-        <p className="whitespace-nowrap text-sm font-medium leading-[1.45em] text-[#535F71]">
+        <p className="whitespace-nowrap text-[13px] font-medium leading-[1.45em] text-[#535F71]">
           符合條件：{total} 筆行程
         </p>
         <div className="flex-1" />
-        <button
-          type="button"
+        {/* The front-site trip listing (search page with every published trip), in a new tab. */}
+        <a
+          href="/search"
+          target="_blank"
+          rel="noopener noreferrer"
           className="flex cursor-pointer items-center rounded-lg border border-[#E0E3E8] bg-white px-3.5 py-2 text-[13px] font-bold leading-[1.45em] text-[#0053E0] hover:bg-[#ECF1FA]"
         >
           預覽前台頁面
-        </button>
+        </a>
       </div>
 
       {/* Batch Action Bar */}
       {selectedIds.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-3 rounded-[10px] border border-[#0053E0] bg-[#ECF1FA] px-4 py-3">
-            <p className="text-sm font-medium leading-[1.45em] text-[#002366]">
+            <p className="text-[13px] font-medium leading-[1.45em] text-[#002366]">
               已選取 {selectedIds.length} 筆
             </p>
             <button
               type="button"
               onClick={() => setSelectedIds([])}
-              className="cursor-pointer text-sm font-medium leading-[1.45em] text-[#535F71] hover:text-[#090909]"
+              className="cursor-pointer text-[13px] font-medium leading-[1.45em] text-[#535F71] hover:text-[#090909]"
             >
               ✕ 清除選取
             </button>
@@ -338,7 +339,7 @@ export default function TripsTable() {
               type="button"
               onClick={() => runBatch("publish", selectedIds)}
               disabled={batchMutation.isPending}
-              className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#E0E3E8] bg-white px-3 py-1.5 text-[11px] font-bold leading-[1.45em] text-[#002366] hover:bg-[#ECF1FA]"
+              className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#E0E3E8] bg-white px-3 py-[7px] text-[13px] font-medium leading-[1.45em] text-[#002366] hover:bg-[#ECF1FA]"
             >
               批次上架
             </button>
@@ -346,7 +347,7 @@ export default function TripsTable() {
               type="button"
               onClick={() => runBatch("unpublish", selectedIds)}
               disabled={batchMutation.isPending}
-              className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#E0E3E8] bg-white px-3 py-1.5 text-[11px] font-bold leading-[1.45em] text-[#002366] hover:bg-[#ECF1FA]"
+              className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#E0E3E8] bg-white px-3 py-[7px] text-[13px] font-medium leading-[1.45em] text-[#002366] hover:bg-[#ECF1FA]"
             >
               批次下架
             </button>
@@ -356,7 +357,7 @@ export default function TripsTable() {
               onClick={() =>
                 setPendingDelete({ ids: selectedIds, label: `已選取的 ${selectedIds.length} 筆行程` })
               }
-              className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#D98C8C] bg-white px-3 py-1.5 text-[11px] font-medium leading-[1.45em] text-[#C71A1A] hover:bg-[#FDEDED]"
+              className="flex cursor-pointer items-center gap-1 rounded-[7px] border border-[#D98C8C] bg-white px-3 py-[7px] text-[13px] font-medium leading-[1.45em] text-[#C71A1A] hover:bg-[#FDEDED]"
             >
               刪除
             </button>

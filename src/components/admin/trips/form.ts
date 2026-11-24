@@ -13,6 +13,8 @@ export type TripForm = {
   highlights_html: string;
   duration_days: number | null;
   seo_title: string;
+  /** 站內搜尋關鍵字: admin-only, matched by the front-site and admin trip search. */
+  search_keywords: string[];
   price_from: number | null;
   currency: string;
   departure_months: number[];
@@ -51,6 +53,7 @@ export function toTripForm(detail: TripDetail): TripForm {
     highlights_html: cover.highlights_html || highlightsToHtml(cover.highlights ?? []),
     duration_days: cover.duration_days,
     seo_title: basic.seo_title,
+    search_keywords: basic.search_keywords ?? [],
     price_from: basic.price_from,
     currency: basic.currency,
     departure_months: basic.departure_months,
@@ -77,7 +80,6 @@ export function toTripForm(detail: TripDetail): TripForm {
 /** PATCH body for the content fields; `publish_status` is sent separately so a failed publish doesn't block saving. */
 export function toTripUpdate(form: TripForm): TripUpdate {
   const { tripType, publish_status, ...fields } = form;
-  void tripType;
   void publish_status;
   // Backend caps the plain list at 6 items × 80 chars; the full content lives in highlights_html.
   const highlights = htmlToHighlights(fields.highlights_html)
@@ -85,6 +87,7 @@ export function toTripUpdate(form: TripForm): TripUpdate {
     .map((item) => item.slice(0, 80));
   return {
     ...fields,
+    trip_type: tripType,
     // Plain-text copy for list uses; the HTML keeps the editor's formatting for the trip page.
     highlights,
     highlights_html: highlights.length ? fields.highlights_html : "",

@@ -47,7 +47,7 @@ export default function TripResultCard({ trip }: { trip: TripResult }) {
               className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#002366]"
             >
               查看行程
-              <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} />
+              <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} className="translate-y-[0.5px]" />
             </a>
           ) : (
             <Link
@@ -55,7 +55,7 @@ export default function TripResultCard({ trip }: { trip: TripResult }) {
               className="flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#002366]"
             >
               查看行程
-              <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} />
+              <Image src="/images/detail-arrow-icon.svg" alt="" width={5} height={8} className="translate-y-[0.5px]" />
             </Link>
           )}
         </div>

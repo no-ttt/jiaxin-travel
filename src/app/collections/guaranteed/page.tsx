@@ -15,7 +15,6 @@ import GuaranteedFilters, {
 } from "@/components/guaranteed/GuaranteedFilters";
 import GuaranteedTripCard from "@/components/guaranteed/GuaranteedTripCard";
 import { usePublicCollectionPages } from "@/lib/api/hooks/useCollections";
-import { useNavigation } from "@/lib/api/hooks/useCms";
 
 const COLLECTION_SLUG = "guaranteed";
 
@@ -44,12 +43,12 @@ export default function GuaranteedDeparturePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [filters, setFilters] = useState<GuaranteedFilterState>(INITIAL_FILTERS);
 
-  const { data: navigation } = useNavigation();
-  const regions = navigation?.regions ?? [];
-  const regionId = regions.find((region) => region.name === filters.destination)?.id;
   const month = filters.departureMonth === ALL_MONTHS ? undefined : parseInt(filters.departureMonth, 10);
 
   // 目的地／出發月份／旅遊天數／排序 are all filtered and sorted by the API.
+  // The picked 目的地 as a region id, resolved when it is chosen (from the list shown in the dropdown).
+  const [regionId, setRegionId] = useState<number | undefined>(undefined);
+
   const { data, isPending, isError, hasNextPage, fetchNextPage, isFetchingNextPage, isFetchNextPageError } =
     usePublicCollectionPages(COLLECTION_SLUG, {
       region_ids: regionId,
@@ -59,6 +58,8 @@ export default function GuaranteedDeparturePage() {
     });
 
   const collection = data?.pages[0];
+  // 目的地 lists only regions that have guaranteed trips; the list ignores the current filters.
+  const regions = collection?.available_regions ?? [];
   const trips = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
@@ -76,7 +77,10 @@ export default function GuaranteedDeparturePage() {
           <GuaranteedFilters
             filters={filters}
             regionNames={regions.map((region) => region.name)}
-            onChange={setFilters}
+            onChange={(next) => {
+              setFilters(next);
+              setRegionId(regions.find((region) => region.name === next.destination)?.id);
+            }}
           />
 
           <div className="flex flex-col gap-1">

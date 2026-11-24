@@ -58,7 +58,18 @@ export function useDeleteTrip() {
 export function useDuplicateTrip() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (tripId: string) => tripsApi.duplicate(tripId),
+    mutationFn: async (tripId: string) => {
+      const created = await tripsApi.duplicate(tripId);
+      // The backend copies the name as-is; mark the copy so the list can tell the two apart.
+      // The copy already exists, so a failed rename must not report the duplicate as failed.
+      try {
+        const copy = await tripsApi.get(created.id);
+        await tripsApi.update(created.id, { product_name: `${copy.cover.product_name}（複本）` });
+      } catch {
+        // Keep the copy with its original name.
+      }
+      return created;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trips"] }),
   });
 }

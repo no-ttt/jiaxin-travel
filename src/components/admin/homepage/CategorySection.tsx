@@ -24,7 +24,7 @@ export default function CategorySection({
   const [warning, setWarning] = useState<string | null>(null);
   const closeWarning = useCallback(() => setWarning(null), []);
 
-  const { data: tripList, isLoading: isTripListLoading } = useTripList({ publish_status: "published", limit: 100 });
+  const { data: tripList, isLoading: isTripListLoading } = useTripList({ publish_status: ["published"], limit: 100 });
   const availableTrips: TripOption[] = (tripList?.items ?? []).map((trip) => ({
     id: trip.id,
     label: `${trip.product_name}（${trip.trip_code}）`,

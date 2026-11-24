@@ -7,6 +7,8 @@ type RichTextEditorProps = {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  /** Red border, e.g. after a save was blocked because this field is empty. */
+  invalid?: boolean;
 };
 
 const FONT_SIZES = [12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32].map((px) => ({ value: `${px}px`, label: `${px} px` }));
@@ -299,7 +301,7 @@ const EditableSurface = memo(
   () => true // never re-render after mount; DOM owns its own content from here on
 );
 
-export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+export default function RichTextEditor({ value, onChange, placeholder, invalid = false }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [initialHtml] = useState(value);
 
@@ -424,7 +426,10 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
   };
 
   return (
-    <div className="flex flex-col rounded-lg border border-[#E0E3E8] bg-white">
+    <div
+      data-invalid={invalid || undefined}
+      className={`flex flex-col rounded-lg border bg-white ${invalid ? "border-[#D92D20]" : "border-[#E0E3E8]"}`}
+    >
       <div className="flex flex-wrap items-center gap-1.5 rounded-t-[7px] border-b border-[#E0E3E8] bg-[#FAFAFA] p-2">
         <div className="flex items-center gap-1.5">
           <ToolbarDropdown

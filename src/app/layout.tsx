@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 import { getFooter, getNavigation, getPurchaseFlow } from "@/lib/api/server";
+import { pageMetadata, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -11,10 +12,10 @@ import { Providers } from "./providers";
 const GOOGLE_FONTS_CSS =
   "https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100..900&family=Noto+Serif+TC:wght@600;700&display=swap";
 
-export const metadata: Metadata = {
-  title: "嘉新旅遊",
-  description: "嘉新旅遊官方網站",
-};
+/** Site defaults; each page sets its own title／description／share image (see @/lib/seo). */
+export async function generateMetadata(): Promise<Metadata> {
+  return { metadataBase: new URL(SITE_URL), ...(await pageMetadata({})) };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Header/Footer/Sidebar read navigation and footer through React Query hooks; seeding the

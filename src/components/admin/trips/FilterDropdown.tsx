@@ -36,10 +36,11 @@ export default function FilterDropdown({ label, options, selected, onChange }: F
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3.5 py-2.5 text-[13px] leading-[1.45em] transition ${
+        className={`flex cursor-pointer items-center gap-2 rounded-lg text-[13px] leading-[1.45em] transition ${
+          // The thicker active border takes its extra 0.5px from the padding, so the size stays the same.
           active
-            ? "border-[#0053E0] bg-white font-bold text-[#0053E0] hover:bg-[#ECF1FA]"
-            : "border-[#E0E3E8] bg-white font-medium text-[#002366] hover:border-[#0053E0]"
+            ? "border-[1.5px] border-[#0053E0] bg-white px-[13.5px] py-[9.5px] font-bold text-[#0053E0] hover:bg-[#ECF1FA]"
+            : "border border-[#E0E3E8] bg-white px-3.5 py-2.5 font-medium text-[#002366] hover:border-[#0053E0]"
         }`}
       >
         <span>

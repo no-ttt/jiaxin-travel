@@ -10,11 +10,10 @@ import AdminToast from "@/components/admin/ui/AdminToast";
 import { ApiError } from "@/lib/api/client";
 import { tripsApi } from "@/lib/api/endpoints/trips";
 import { useTrip } from "@/lib/api/hooks/useTrips";
-import { useBadgeOptions, useTripStatusOptions } from "@/lib/api/hooks/useTaxonomy";
-import type { TaxonomyOption } from "@/lib/api/types/taxonomy";
+import { useBadgeOptions, useThemes, useTripStatusOptions } from "@/lib/api/hooks/useTaxonomy";
+import type { TaxonomyOption, Theme } from "@/lib/api/types/taxonomy";
 import type { TripDetail, TripType } from "@/lib/api/types/trip";
 import {
-  generateTripCode,
   toTripForm,
   toTripUpdate,
   type TripForm,
@@ -36,6 +35,7 @@ import {
 import { EDITOR_STEPS, OWN_TRIP_ONLY_STEPS, type EditorStepKey } from "./editor-steps";
 import { writePreviewDraft } from "./preview-draft";
 import {
+  hasThemeRemovals,
   sameIdentityOptions,
   saveIdentityOptions,
   toIdentityOptions,
@@ -49,7 +49,11 @@ import FlightSection from "./FlightSection";
 import ItinerarySection from "./ItinerarySection";
 import PurchaseNoticeSection from "./PurchaseNoticeSection";
 
+/** PATCH succeeded but the trip kept its old type. */
+const TRIP_TYPE_UNCHANGED = "行程類型未能變更（其他欄位已儲存）";
+
 function apiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message === TRIP_TYPE_UNCHANGED) return err.message;
   if (err instanceof ApiError) {
     const message = (err.detail as { error?: { message?: string } } | undefined)?.error?.message;
     if (message) return message;
@@ -91,10 +95,7 @@ function mergeContent(current: TripContent, incoming: TripContent): TripContent 
   };
 }
 
-export default function TripEditor({ tripId: initialTripId }: { tripId: string }) {
-  // A type change rebuilds the trip under a new id; track it here instead of re-routing,
-  // so the editor isn't re-mounted (which looked like a page reload).
-  const [tripId, setTripId] = useState(initialTripId);
+export default function TripEditor({ tripId }: { tripId: string }) {
   const [activeStep, setActiveStep] = useState<EditorStepKey>("cover");
   const isClickScrolling = useRef(false);
 
@@ -103,6 +104,8 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
   const closeToast = useCallback(() => setToast(null), []);
+  // Turned on when a save is blocked by a field: invalid inputs get a red border until fixed.
+  const [showErrors, setShowErrors] = useState(false);
 
   // Reset the draft whenever a fresh server copy arrives (initial load, after save).
   const [syncedDetail, setSyncedDetail] = useState<TripDetail | null>(null);
@@ -110,13 +113,7 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
   const [draft, setDraft] = useState<EditorDraft | null>(null);
   if (detail && detail !== syncedDetail) {
     const incoming = { form: toTripForm(detail), content: toTripContent(detail) };
-    // Keep the type the user last picked: a switch clicked while a rebuild runs is applied after it.
-    const next = draft
-      ? {
-          form: { ...incoming.form, tripType: draft.form.tripType },
-          content: mergeContent(draft.content, incoming.content),
-        }
-      : incoming;
+    const next = draft ? { ...incoming, content: mergeContent(draft.content, incoming.content) } : incoming;
     setSyncedDetail(detail);
     setSaved(next);
     setDraft(next);
@@ -131,17 +128,23 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
     draft !== null &&
     saved !== null &&
     JSON.stringify(toPayloads(draft)) !== JSON.stringify(toPayloads(saved));
-  // 識別內容設定 (行程狀態／卡片標章 lists): edited here, applied on 儲存變更 like the trip itself.
+  // 識別內容設定 (主題標籤／行程狀態／卡片標章 lists): edited here, applied on 儲存變更 like the trip.
+  const { data: themeList } = useThemes();
   const { data: statusList } = useTripStatusOptions();
   const { data: badgeList } = useBadgeOptions();
-  const [syncedLists, setSyncedLists] = useState<[TaxonomyOption[], TaxonomyOption[]] | null>(null);
+  const [syncedLists, setSyncedLists] = useState<[Theme[], TaxonomyOption[], TaxonomyOption[]] | null>(null);
   const [optionBase, setOptionBase] = useState<IdentityOptions | null>(null);
   const [options, setOptions] = useState<IdentityOptions | null>(null);
-  if (statusList && badgeList && (syncedLists?.[0] !== statusList || syncedLists?.[1] !== badgeList)) {
-    const incoming = toIdentityOptions(statusList, badgeList);
+  if (
+    themeList &&
+    statusList &&
+    badgeList &&
+    (syncedLists?.[0] !== themeList || syncedLists?.[1] !== statusList || syncedLists?.[2] !== badgeList)
+  ) {
+    const incoming = toIdentityOptions(themeList, statusList, badgeList);
     // Keep unsaved list edits across a background refetch.
     const hasEdits = options && optionBase && !sameIdentityOptions(options, optionBase);
-    setSyncedLists([statusList, badgeList]);
+    setSyncedLists([themeList, statusList, badgeList]);
     setOptionBase(incoming);
     if (!hasEdits) setOptions(incoming);
   }
@@ -182,50 +185,76 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
     []
   );
 
+  /** A save blocked by a field: warn, mark the invalid fields red and scroll to the first one. */
+  const blockSave = (message: string, step: EditorStepKey) => {
+    setToast({ message, variant: "warning" });
+    setShowErrors(true);
+    setActiveStep(step);
+    // Wait for the red borders (and an expanded card) to render, then bring the first one into
+    // view just below the pinned header.
+    window.requestAnimationFrame(() => {
+      const target =
+        document.getElementById(step)?.querySelector("[data-invalid]") ?? document.getElementById(step);
+      if (!target) return;
+      isClickScrolling.current = true;
+      const top = target.getBoundingClientRect().top + window.scrollY - stickyOffset() - 48;
+      window.scrollTo({ top, behavior: "smooth" });
+      if (target instanceof HTMLInputElement) target.focus({ preventScroll: true });
+      window.setTimeout(() => {
+        isClickScrolling.current = false;
+      }, 700);
+    });
+  };
+
   const handleSave = async () => {
     if (!draft || !saved) return;
     const flightError = isExternal ? null : validateFlights(draft.content.flights);
     if (flightError) {
-      setToast({ message: flightError, variant: "warning" });
+      blockSave(flightError, "flights");
       return;
     }
     const incompleteCard = isExternal ? null : findIncompleteFeatureCard(draft.content.featureCards);
     if (incompleteCard) {
-      setToast({ message: incompleteCard.message, variant: "warning" });
-      // Open that card and bring the 行程特色 step into view so it's easy to fix.
+      // Open that card so its empty fields are visible.
       updateContent("featureCards")((cards) =>
         cards.map((card) => (card._id === incompleteCard.id ? { ...card, expanded: true } : card))
       );
-      setActiveStep("highlights");
-      // Scroll once the card has re-rendered expanded, so it lands just below the pinned header.
-      window.requestAnimationFrame(() => {
-        const cardEl = document.querySelector(`[data-card-id="${incompleteCard.id}"]`);
-        if (!cardEl) return;
-        isClickScrolling.current = true;
-        window.scrollTo({ top: cardEl.getBoundingClientRect().top + window.scrollY - stickyOffset() - 12, behavior: "smooth" });
-        window.setTimeout(() => {
-          isClickScrolling.current = false;
-        }, 700);
-      });
+      blockSave(incompleteCard.message, "highlights");
       return;
     }
     // The backend doesn't check this, but an external trip's frontend CTA needs the link.
     if (isExternal && draft.form.publish_status === "published" && !draft.form.external_url.trim()) {
-      setToast({ message: "外部連結行程需填寫「外部連結網址」才能上架", variant: "warning" });
+      blockSave("外部連結行程需填寫「外部連結網址」才能上架", "basic");
       return;
     }
+    setShowErrors(false);
 
-    // Option lists first: the trip may use a status／badge that is only created now.
+    // Option lists first: the trip may use a theme／status／badge that is only created now. Removed
+    // themes wait until after the trip is saved (this trip may be the one still using them).
     let draftToSave = draft;
+    let pendingThemeRemoval: { base: IdentityOptions; draft: IdentityOptions } | null = null;
     if (options && optionBase && optionsDirty) {
       setIsSaving(true);
-      const result = await saveIdentityOptions(optionBase, options);
+      const result = await saveIdentityOptions(optionBase, options, { keepThemes: true });
       const remap = (id: number | null) => (id !== null && id < 0 ? (result.createdIds.get(id) ?? null) : id);
-      const remapForm = (f: TripForm): TripForm => ({ ...f, status_id: remap(f.status_id), badge_id: remap(f.badge_id) });
+      const remapForm = (f: TripForm): TripForm => ({
+        ...f,
+        status_id: remap(f.status_id),
+        badge_id: remap(f.badge_id),
+        theme_ids: f.theme_ids.map(remap).filter((id): id is number => id !== null),
+      });
       const remapList = (list: IdentityOptions["statuses"]) =>
         list.map((o) => (o.id < 0 && result.createdIds.has(o.id) ? { ...o, id: result.createdIds.get(o.id)! } : o));
+      const remapped = {
+        themes: remapList(options.themes),
+        statuses: remapList(options.statuses),
+        badges: remapList(options.badges),
+      };
       setOptionBase(result.saved);
-      setOptions({ statuses: remapList(options.statuses), badges: remapList(options.badges) });
+      setOptions(remapped);
+      if (!result.error && hasThemeRemovals(result.saved, remapped)) {
+        pendingThemeRemoval = { base: result.saved, draft: remapped };
+      }
       await queryClient.invalidateQueries({ queryKey: ["taxonomy"] });
       if (result.error) {
         setToast({
@@ -252,7 +281,13 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
       {
         label: "封面／基本資料",
         changed: next.trip !== prev.trip,
-        run: () => tripsApi.update(tripId, toTripUpdate(form)),
+        run: async () => {
+          await tripsApi.update(tripId, toTripUpdate(form));
+          // The PATCH answers 200 even when it ignores trip_type, so confirm the switch took.
+          if (form.tripType !== saved.form.tripType && (await tripsApi.get(tripId)).trip_type !== form.tripType) {
+            throw new Error(TRIP_TYPE_UNCHANGED);
+          }
+        },
         commit: (base) => ({ ...base, form: { ...form, publish_status: base.form.publish_status } }),
       },
       {
@@ -309,6 +344,21 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
           return;
         }
       }
+      if (pendingThemeRemoval) {
+        const removal = await saveIdentityOptions(pendingThemeRemoval.base, pendingThemeRemoval.draft);
+        setOptionBase(removal.saved);
+        // A theme another trip still uses stays (the backend refuses with 409); show it again.
+        if (removal.error) setOptions(removal.saved);
+        await queryClient.invalidateQueries({ queryKey: ["taxonomy"] });
+        if (removal.error) {
+          setToast({
+            message: `主題標籤未能移除：${apiErrorMessage(removal.error, "請稍後再試")}（其他內容已儲存）`,
+            variant: "warning",
+          });
+          await queryClient.invalidateQueries({ queryKey: ["trips"] });
+          return;
+        }
+      }
       setToast({ message: "已儲存變更", variant: "success" });
       await queryClient.invalidateQueries({ queryKey: ["trips"] });
     } finally {
@@ -316,107 +366,21 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
     }
   };
 
-  /**
-   * Trip type can't be changed via PATCH, so a type change rebuilds the trip: create a new one
-   * with the other type (new trip code, draft), copy the current draft into it, delete the old one.
-   */
+  /** Type switches in place on the draft and is sent with 儲存變更 (same trip, code and status). */
   const [pendingTripType, setPendingTripType] = useState<TripType | null>(null);
-  // A switch clicked while a rebuild is running: shown right away, applied once the rebuild ends.
-  const queuedTripType = useRef<TripType | null>(null);
-
-
-  const handleTripTypeChange = async (tripType: TripType) => {
-    if (!draft) return;
-    const source = draft;
-    const toExternal = tripType === "external";
-
-    // Switch the UI right away; the rebuild below runs several requests in sequence.
-    setDraft({ ...source, form: { ...source.form, tripType } });
-    setIsSaving(true);
-    let newId: string | null = null;
-    try {
-      const created = await tripsApi.create({
-        trip_code: generateTripCode(),
-        trip_type: tripType,
-        product_name: source.form.product_name,
-      });
-      newId = created.id;
-      // Independent copies, sent together to keep the switch short.
-      const copyId = newId;
-      await Promise.all([
-        tripsApi.update(copyId, toTripUpdate(source.form)),
-        tripsApi.putNoticeTabs(copyId, toNoticeTabsPayload(source.content.noticeTabs)),
-        ...(toExternal
-          ? []
-          : [
-              tripsApi.putFeatureCards(copyId, toFeatureCardsPayload(source.content.featureCards)),
-              tripsApi.putFlights(copyId, toFlightsPayload(source.content.flights)),
-              tripsApi.putDays(copyId, toDaysPayload(source.content.days)),
-            ]),
-      ]);
-      await tripsApi.remove(tripId);
-      // Refresh lists, but not the old (now deleted) trip, which would 404 before navigation.
-      queryClient.invalidateQueries({
-        queryKey: ["trips"],
-        predicate: (query) => query.queryKey[1] !== tripId,
-      });
-      // Warm the cache so switching to the new id renders without a loading state.
-      const rebuiltId = newId;
-      await queryClient.prefetchQuery({
-        queryKey: ["trips", rebuiltId],
-        queryFn: () => tripsApi.get(rebuiltId),
-      });
-      // Stop any in-flight / focus refetch of the deleted trip (it would 404 and flag an error).
-      const oldId = tripId;
-      await queryClient.cancelQueries({ queryKey: ["trips", oldId], exact: true });
-      setTripId(rebuiltId);
-      window.history.replaceState(null, "", `/admin/dashboard/trips/${rebuiltId}`);
-      window.setTimeout(() => queryClient.removeQueries({ queryKey: ["trips", oldId], exact: true }), 0);
-      setIsSaving(false);
-    } catch (err) {
-      queuedTripType.current = null;
-      // Roll back the half-built copy; the original trip is untouched until the final delete.
-      const rollbackFailed = newId
-        ? await tripsApi.remove(newId).then(
-            () => false,
-            () => true
-          )
-        : false;
-      setDraft((current) =>
-        current ? { ...current, form: { ...current.form, tripType: source.form.tripType } } : current
-      );
-      const orphanNote = rollbackFailed ? "（新建立的草稿行程未能刪除，請至行程列表手動移除）" : "";
-      setToast({
-        message: `變更類型失敗：${apiErrorMessage(err, "請稍後再試")}${orphanNote}`,
-        variant: "warning",
-      });
-      setIsSaving(false);
-    }
-  };
+  const applyTripType = (tripType: TripType) =>
+    setDraft((current) => (current ? { ...current, form: { ...current.form, tripType } } : current));
 
   const requestTripType = (type: TripType) => {
     if (!draft) return;
-    if (isSaving) {
-      queuedTripType.current = type;
-      setDraft((current) => (current ? { ...current, form: { ...current.form, tripType: type } } : current));
-      return;
-    }
     // Only ask when the other type's fields have something filled in.
     const hasFilled =
       type === "external"
         ? hasOwnTripContent(draft.content)
         : Boolean(draft.form.external_url.trim() || draft.form.source_agency.trim());
     if (hasFilled) setPendingTripType(type);
-    else handleTripTypeChange(type);
+    else applyTripType(type);
   };
-
-  useEffect(() => {
-    if (isSaving || !queuedTripType.current) return;
-    const type = queuedTripType.current;
-    queuedTripType.current = null;
-    if (detail && detail.trip_type !== type) requestTripType(type);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once each time a rebuild ends
-  }, [isSaving]);
 
   // Once a preview tab is open, keep its draft in sync so it re-renders as the admin edits.
   const isPreviewOpen = useRef(false);
@@ -543,6 +507,7 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
                   onTripTypeChange={requestTripType}
                   options={options}
                   onOptionsChange={setOptions}
+                  showErrors={showErrors}
                 />
               ) : step.key === "highlights" ? (
                 <HighlightsSection
@@ -550,6 +515,7 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
                   description={step.description}
                   value={draft.content.featureCards}
                   onChange={updateContent("featureCards")}
+                  showErrors={showErrors}
                 />
               ) : step.key === "flights" ? (
                 <FlightSection
@@ -557,6 +523,7 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
                   description={step.description}
                   value={draft.content.flights}
                   onChange={updateContent("flights")}
+                  showErrors={showErrors}
                 />
               ) : step.key === "itinerary" ? (
                 <ItinerarySection
@@ -588,16 +555,10 @@ export default function TripEditor({ tripId: initialTripId }: { tripId: string }
               : "確定要改為自建行程嗎？"
           }
           confirmLabel="確定變更"
-          onCancel={() => {
-            setPendingTripType(null);
-            // A queued switch already showed the new type; put the real one back.
-            const actual = detail?.trip_type;
-            if (actual) setDraft((current) => (current ? { ...current, form: { ...current.form, tripType: actual } } : current));
-          }}
+          onCancel={() => setPendingTripType(null)}
           onConfirm={() => {
-            const tripType = pendingTripType;
+            applyTripType(pendingTripType);
             setPendingTripType(null);
-            handleTripTypeChange(tripType);
           }}
         />
       )}

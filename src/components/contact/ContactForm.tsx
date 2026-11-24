@@ -1,5 +1,6 @@
 "use client";
 
+import PrivacyConsentCheckbox from "@/components/ui/PrivacyConsentCheckbox";
 import { useCallback, useState } from "react";
 import Image from "next/image";
 import TurnstileWidget from "@/components/ui/TurnstileWidget";
@@ -201,24 +202,7 @@ export default function ContactForm({ trip }: { trip: TripDetail | null }) {
             />
           </Field>
 
-          <label className="flex cursor-pointer items-center gap-2.5">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(event) => setAgreed(event.target.checked)}
-              className="peer sr-only"
-            />
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border border-[#C7CFD9] text-white peer-checked:border-[#0053E0] peer-checked:bg-[#0053E0]">
-              {agreed && (
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                  <path d="M2.5 6.5L5 9L10.5 3.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </span>
-            <span className="text-[15px] leading-[1.45] text-[#535F71]">
-              我已閱讀並同意個人資料蒐集與使用說明
-            </span>
-          </label>
+          <PrivacyConsentCheckbox checked={agreed} onChange={setAgreed} />
 
           {/* Honeypot for bots: hidden from people, must stay empty. */}
           <input

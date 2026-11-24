@@ -4,10 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useFooter } from "@/lib/api/hooks/useCms";
 
-/** The phone number is the one set in 網站頁尾設定 (same as the footer). */
+const buttonClass =
+  "flex h-11 w-[118px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#0053E0] text-sm font-bold text-white hover:bg-[#0047c2]";
+
+/** The phone number and LINE link are the ones set in 網站頁尾設定 (same as the footer). */
 export default function ServiceReminderCta() {
   const { data: footer } = useFooter();
   const phone = footer?.phone;
+  const lineUrl = footer?.line_url;
   return (
     <div
       className="flex w-full flex-1 flex-col items-start justify-between gap-6 rounded-[20px] px-6 py-5 sm:flex-row sm:items-center sm:px-8"
@@ -32,12 +36,16 @@ export default function ServiceReminderCta() {
             {phone}
           </a>
         )}
-        <Link
-          href="/contact"
-          className="flex h-11 w-[118px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#0053E0] text-sm font-bold text-white hover:bg-[#0047c2]"
-        >
-          聯絡我們
-        </Link>
+        {/* /contact only takes trip inquiries, so a general contact goes to LINE (or the 客製包團需求單). */}
+        {lineUrl ? (
+          <a href={lineUrl} target="_blank" rel="noopener noreferrer" className={buttonClass}>
+            聯絡我們
+          </a>
+        ) : (
+          <Link href="/custom-group" className={buttonClass}>
+            聯絡我們
+          </Link>
+        )}
       </div>
     </div>
   );

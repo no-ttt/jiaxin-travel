@@ -85,7 +85,7 @@ export default function AdminSidebar() {
         type="button"
         onClick={() => confirmLeave(handleCreateTrip)}
         disabled={createTrip.isPending}
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-[#DBE8FF] py-3.5 text-[15px] font-bold leading-[1.4em] text-[#0053E0] transition hover:bg-[#B4BED1]"
+        className="flex h-[42px] w-full shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-[#DBE8FF] text-sm font-bold leading-[1.4em] text-[#0053E0] transition hover:bg-[#B4BED1]"
       >
         <span className="text-lg leading-none">＋</span>
         <span>新增行程</span>

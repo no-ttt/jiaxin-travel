@@ -3,7 +3,6 @@ import { generateId } from "../ui/generateId";
 
 export type OrderFlowStep = {
   id: string;
-  label: string;
   visible: boolean;
   title: string;
   content: string;
@@ -30,9 +29,8 @@ export type EditableOrderFlow = {
 
 export function toEditableOrderFlow(doc: PurchaseFlowPage): EditableOrderFlow {
   return {
-    steps: doc.steps.map((step, i) => ({
+    steps: doc.steps.map((step) => ({
       id: generateId("step"),
-      label: `步驟 ${i + 1}`,
       visible: step.visible,
       title: step.title,
       content: step.body_html,

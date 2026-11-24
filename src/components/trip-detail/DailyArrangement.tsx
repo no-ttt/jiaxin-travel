@@ -10,13 +10,20 @@ const LEGEND: { type: StopType; label: string; icon: string }[] = [
   { type: "pass", label: "行車經過", icon: "/images/trip-detail/legend-pass.svg" },
 ];
 
+/** Design: 18px label in a white chip (2px 4px padding, 48px text box) — shared by 餐食 and 住宿. */
+function InfoLabel({ children }: { children: string }) {
+  return (
+    <span className="flex shrink-0 items-center justify-center rounded-[10px] border border-[#E0E3E8] bg-white px-1 py-0.5">
+      <span className="w-12 text-center text-lg leading-[1.5] tracking-[-0.011em] text-[#535F71]">{children}</span>
+    </span>
+  );
+}
+
 function MealRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex w-12 shrink-0 items-center justify-center rounded-[10px] border border-[#E0E3E8] px-1 py-0.5 text-center text-sm text-[#535F71]">
-        {label}
-      </span>
-      <span className="text-sm text-[#1A1C1E]">{value}</span>
+      <InfoLabel>{label}</InfoLabel>
+      <span className="text-lg leading-[1.5] tracking-[-0.011em] text-[#1A1C1E]">{value}</span>
     </div>
   );
 }
@@ -60,60 +67,78 @@ function DayPhotos({ images }: { images: string[] }) {
 }
 
 function DayCard({ day }: { day: DayPlan }) {
+  // Fields left blank in the admin are left out (no empty「早餐」label); a row with nothing hides.
+  const meals = [
+    { label: "早餐", value: day.meals.breakfast },
+    { label: "午餐", value: day.meals.lunch },
+    { label: "晚餐", value: day.meals.dinner },
+  ].filter((meal) => meal.value.trim());
+  const hotels = day.hotelOptions.filter((hotel) => hotel.trim());
+
   return (
-    <div id={`day-${day.day}`} className="flex scroll-mt-28 flex-col items-stretch">
+    <div id={`day-${day.day}`} className="flex scroll-mt-28 flex-col items-stretch bg-white">
       <div className="flex flex-col gap-3 rounded-[20px] bg-[#ECF1FA] p-5 sm:flex-row">
-        <div className="flex h-24 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-[1.5px] border-[rgba(0,83,224,0.1)] bg-[rgba(0,83,224,0.1)]">
-          <span className="text-lg font-semibold text-[#002366]">{day.date}</span>
-          <span className="font-['TASA_Orbiter'] text-2xl font-semibold text-[#002366]">DAY {day.day}</span>
-          <span className="text-lg font-semibold text-[#002366]">{day.weekday}</span>
+        <div className="flex h-24 w-24 shrink-0 flex-col items-stretch justify-center rounded-2xl border-[1.5px] border-[rgba(0,83,224,0.1)] bg-[rgba(0,83,224,0.1)] text-center font-['TASA_Orbiter'] font-semibold text-[#002366]">
+          <span className="h-6 text-lg leading-6">{day.date}</span>
+          <span className="h-8 text-2xl leading-8">DAY {day.day}</span>
+          <span className="h-6 text-lg leading-6">{day.weekday}</span>
         </div>
         <div className="flex flex-1 flex-wrap items-center gap-x-1 gap-y-2 py-3">
           {day.stops.map((stop, i) => (
             <span key={i} className="flex items-center gap-1">
               {i > 0 && (
-                <svg viewBox="0 0 8 13" className="h-3 w-2 shrink-0 fill-[#535F71]">
-                  <path d="M0 0 L8 6.5 L0 13 Z" />
-                </svg>
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center px-[3px]">
+                  {/* Design chevron (Figma 270:2467). */}
+                  <svg viewBox="0 0 8 13" className="h-[12.57px] w-[7.36px] fill-[#535F71]" aria-hidden="true">
+                    <path d="M1.116 13c-.166 0-.31-.029-.433-.085a1.4 1.4 0 0 1-.355-.256A1.08 1.08 0 0 1 0 11.877c0-.302.11-.562.328-.781L4.924 6.5.328 1.904A1.07 1.07 0 0 1 0 1.123C0 .82.11.56.328.341.556.114.819 0 1.116 0s.56.114.788.341l5.384 5.371c.219.228.328.49.328.788s-.11.56-.328.788L1.904 12.659a1.2 1.2 0 0 1-.394.256c-.149.057-.28.085-.394.085" />
+                  </svg>
+                </span>
               )}
               {/* Design: each stop chip has 12px horizontal padding around the separators. */}
-              <span className="px-3 text-lg text-black">{stop.name}</span>
+              <span className="px-3 text-lg leading-[1.6] text-black">{stop.name}</span>
             </span>
           ))}
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 px-6 py-6 sm:px-10">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]">
-            <Image src="/images/trip-detail/meal-icon.svg" alt="" width={26} height={26} />
-          </div>
-          <div className="flex flex-1 flex-wrap items-center gap-x-6 gap-y-2">
-            <MealRow label="早餐" value={day.meals.breakfast} />
-            <MealRow label="午餐" value={day.meals.lunch} />
-            <MealRow label="晚餐" value={day.meals.dinner} />
-          </div>
+      {/* Design: a 1px line runs down the left of the day's details, from the header to the end. */}
+      <div className="relative">
+        <span aria-hidden="true" className="absolute inset-y-0 left-4 w-px bg-[#002366]" />
+        <div className="flex flex-col gap-5 px-6 py-6 sm:px-10">
+          {meals.length > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]">
+                <Image src="/images/trip-detail/meal-icon.svg" alt="" width={26} height={26} />
+              </div>
+              <div className="flex flex-1 flex-wrap items-center gap-x-8 gap-y-2">
+                {meals.map((meal) => (
+                  <MealRow key={meal.label} label={meal.label} value={meal.value} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hotels.length > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]">
+                <Image src="/images/trip-detail/hotel-icon.svg" alt="" width={30} height={30} />
+              </div>
+              <div className="flex flex-1 flex-wrap items-center gap-3">
+                <InfoLabel>住宿</InfoLabel>
+                {hotels.map((hotel, i) => (
+                  <span key={hotel} className="flex items-center gap-3 text-[#1A1C1E]">
+                    {i > 0 && <span className="text-base leading-[1.5] tracking-[-0.011em]">或</span>}
+                    <span className="text-lg leading-[1.5] tracking-[-0.011em]">{hotel}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]">
-            <Image src="/images/trip-detail/hotel-icon.svg" alt="" width={30} height={30} />
-          </div>
-          <div className="flex flex-1 flex-wrap items-center gap-2">
-            <span className="flex w-12 shrink-0 items-center justify-center rounded-[10px] border border-[#E0E3E8] px-1 py-0.5 text-center text-sm text-[#535F71]">
-              住宿
-            </span>
-            {day.hotelOptions.map((hotel, i) => (
-              <span key={hotel} className="flex items-center gap-2 text-base text-[#1A1C1E]">
-                {i > 0 && <span>或</span>}
-                {hotel}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col-reverse gap-5 pl-0 sm:flex-row sm:pl-8">
-          <p className="flex-1 text-base leading-relaxed text-[#4A5058]">{day.description}</p>
+        {/* Design: its own block (20px 16px 20px 32px), text box padded 8px 12px, 28px to the photo. */}
+        <div className="flex flex-col-reverse gap-5 py-5 pl-4 pr-4 sm:flex-row sm:gap-7 sm:pl-8">
+          <p className="flex-1 px-3 py-2 text-base leading-[1.6] text-[#4A5058]">{day.description}</p>
           {day.images.length > 0 && <DayPhotos images={day.images} />}
         </div>
       </div>
@@ -131,7 +156,7 @@ export default function DailyArrangement({ days }: { days: DayPlan[] }) {
   return (
     <section id="daily" className="flex scroll-mt-28 flex-col gap-[18px] pb-11 pt-10">
       <div className="flex flex-col gap-2 px-2.5">
-        <h2 className="font-serif text-2xl font-bold text-[#090909]">每日安排</h2>
+        <h2 className="font-serif text-2xl font-bold leading-[1.35] text-[#090909]">每日安排</h2>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-5">
@@ -150,7 +175,7 @@ export default function DailyArrangement({ days }: { days: DayPlan[] }) {
                 type="button"
                 onClick={() => scrollToDay(day.day)}
                 aria-label={`前往 DAY ${day.day}`}
-                className="flex h-[30px] w-9 cursor-pointer items-center justify-center rounded-2xl border border-[#E0E3E8] bg-[#FAFAFA] text-xs font-medium text-[#535F71] transition hover:border-[#0053E0] hover:text-[#0053E0]"
+                className="flex h-[30px] w-9 cursor-pointer items-center justify-center rounded-[15px] border border-[#E0E3E8] bg-[#FAFAFA] font-['TASA_Orbiter'] text-[13px] font-semibold leading-[1.4] text-[#535F71] transition hover:border-[#0053E0] hover:text-[#0053E0]"
               >
                 {day.day}
               </button>
@@ -178,16 +203,15 @@ export default function DailyArrangement({ days }: { days: DayPlan[] }) {
       )}
 
       <div className="flex h-[46px] items-center rounded-[10px] bg-[#FAFAFA] px-[18px]">
-        <p className="text-[13px] text-[#535F71]">
+        <p className="text-[13px] leading-[1.5] text-[#535F71]">
           此處行程順序為理想安排；若遇當地交通、天候或特殊狀況，將以行程順暢與安全為原則彈性調整。
         </p>
       </div>
 
-      <div className="flex flex-col divide-y divide-[#E0E3E8] overflow-hidden rounded-[18px] border border-[#E0E3E8] bg-white shadow-[0px_10px_28px_0px_rgba(5,20,41,0.05)]">
-        {days.map((day) => (
-          <DayCard key={day.day} day={day} />
-        ))}
-      </div>
+      {/* Design: day cards sit directly in the section, 18px apart (no outer frame). */}
+      {days.map((day) => (
+        <DayCard key={day.day} day={day} />
+      ))}
     </section>
   );
 }

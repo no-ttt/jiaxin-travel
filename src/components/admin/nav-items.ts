@@ -10,10 +10,9 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "簽證代辦", href: "/admin/dashboard/visa" },
   { label: "旅程分享", href: "/admin/dashboard/journey-share" },
   { label: "訂購流程", href: "/admin/dashboard/order-flow" },
-  // 取消／退訂規定、聲明公告專區改為前台寫死，後台設定頁停用。
-  // { label: "取消／退訂規定", href: "/admin/dashboard/cancellation-policy" },
+  { label: "取消／退訂規定", href: "/admin/dashboard/cancellation-policy" },
   { label: "旅遊契約書", href: "/admin/dashboard/contract" },
   { label: "防詐騙提醒說明", href: "/admin/dashboard/fraud-notice" },
-  // { label: "聲明公告專區", href: "/admin/dashboard/announcements" },
+  { label: "聲明公告專區", href: "/admin/dashboard/announcements" },
   { label: "網站頁尾設定", href: "/admin/dashboard/footer" },
 ];

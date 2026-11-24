@@ -3,12 +3,13 @@
 import { useCallback, useState } from "react";
 import AdminConfirmDialog from "@/components/admin/ui/AdminConfirmDialog";
 import AdminToast from "@/components/admin/ui/AdminToast";
-import { useRegions, useThemes } from "@/lib/api/hooks/useTaxonomy";
+import { useRegions } from "@/lib/api/hooks/useTaxonomy";
 import type { PublishStatus, TripType } from "@/lib/api/types/trip";
 import AdminSelect from "./AdminSelect";
 import AdminDateField from "./AdminDateField";
 import TagMultiSelect from "./TagMultiSelect";
-import { newOptionId, type IdentityOptions } from "./identity-options";
+import KeywordTagInput from "./KeywordTagInput";
+import { newOptionId, type IdentityKind, type IdentityOptions } from "./identity-options";
 import {
   formatAmount,
   formatPriceFrom,
@@ -30,6 +31,9 @@ const ZONES: { label: string; key: "in_overseas_group" | "in_theme_travel" | "in
   { label: "精緻璽品", key: "in_premium" },
   { label: "美安專區", key: "in_meian" },
 ];
+/** Fixed 卡片 Badge choice after the managed badges (also shown as a chip in 識別內容設定). */
+const BADGE_NONE = "不顯示";
+const REMOVAL_NOUN: Record<IdentityKind, string> = { themes: "主題標籤", statuses: "行程狀態", badges: "卡片標章" };
 const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
 
 function toChips(items: { id: number; name: string }[] | undefined): Chip[] {
@@ -162,18 +166,22 @@ export default function BasicInfoSection({
   onTripTypeChange,
   options,
   onOptionsChange,
+  showErrors = false,
 }: {
   title: string;
   description: string;
   value: TripForm;
   onChange: TripFormChange;
-  /** Trip type is fixed after creation; the editor handles a change by rebuilding the trip. */
+  /** Switches the draft's type in place; it is sent with the next save (trip code and status stay). */
   onTripTypeChange: (type: TripType) => void;
   /** 行程狀態／卡片標章 lists (draft; saved with 儲存變更). */
   options: IdentityOptions | null;
   onOptionsChange: (options: IdentityOptions) => void;
+  /** Set after a save was blocked: a missing 外部連結網址 on a published external trip turns red. */
+  showErrors?: boolean;
 }) {
-  const { data: themes } = useThemes();
+  // 主題標籤 come from the editable list below, so a theme added there can be picked right away.
+  const themes = options?.themes;
   const { data: regions } = useRegions();
   const statuses = options?.statuses;
   const badges = options?.badges;
@@ -182,21 +190,20 @@ export default function BasicInfoSection({
   const badgeOptions = toChips(badges);
   const regionTags = (regions ?? []).map((region) => region.name);
 
-  // Managing the theme list itself is not wired up here (themes are managed in 產品分類設定).
   const [notice, setNotice] = useState<string | null>(null);
   const closeNotice = useCallback(() => setNotice(null), []);
-  const notWired = () => setNotice("選項管理尚未串接，請先使用既有選項");
 
   // 行程狀態／卡片標章 lists: edits stay in the draft until 儲存變更.
   const [pendingRemoval, setPendingRemoval] = useState<{
-    kind: "statuses" | "badges";
+    kind: IdentityKind;
     id: number;
     label: string;
   } | null>(null);
 
-  const addOption = (kind: "statuses" | "badges", label: string) => {
+  const addOption = (kind: IdentityKind, label: string) => {
     if (!options) return;
-    if (options[kind].some((option) => option.name === label)) {
+    const reserved = kind === "badges" && label === BADGE_NONE;
+    if (reserved || options[kind].some((option) => option.name === label)) {
       setNotice(`「${label}」已存在`);
       return;
     }
@@ -211,16 +218,26 @@ export default function BasicInfoSection({
     // Saving removes it from every trip; clear it here so this trip doesn't send a removed id.
     if (kind === "statuses" && value.status_id === id) onChange({ status_id: null });
     if (kind === "badges" && value.badge_id === id) onChange({ badge_mode: "auto", badge_id: null });
+    if (kind === "themes" && value.theme_ids.includes(id)) {
+      onChange({ theme_ids: value.theme_ids.filter((themeId) => themeId !== id) });
+    }
   };
 
   const tripType = value.tripType === "own" ? "custom" : "external";
 
-  // The dropdowns list exactly the managed options; nothing selected shows an empty field.
+  // 行程狀態 lists exactly the managed options; nothing selected shows an empty field.
   const tripStatus = statuses?.find((option) => option.id === value.status_id)?.name ?? "";
+  // 卡片 Badge: each managed badge, or 不顯示; a trip with neither (the default) shows empty.
   const cardBadge =
-    value.badge_mode === "custom" ? (badges?.find((option) => option.id === value.badge_id)?.name ?? "") : "";
-  const setCardBadge = (label: string) =>
-    onChange({ badge_mode: "custom", badge_id: badges?.find((b) => b.name === label)?.id ?? null });
+    value.badge_mode === "none"
+      ? BADGE_NONE
+      : value.badge_mode === "custom"
+        ? (badges?.find((option) => option.id === value.badge_id)?.name ?? "")
+        : "";
+  const setCardBadge = (label: string) => {
+    if (label === BADGE_NONE) onChange({ badge_mode: "none", badge_id: null });
+    else onChange({ badge_mode: "custom", badge_id: badges?.find((b) => b.name === label)?.id ?? null });
+  };
 
   const selectedMonths = value.departure_months.map((month) => `${month}月`);
   const toggleMonth = (label: string) => {
@@ -246,6 +263,8 @@ export default function BasicInfoSection({
   })();
 
   const isExternal = tripType === "external";
+  const externalUrlMissing =
+    showErrors && value.publish_status === "published" && !value.external_url.trim();
 
   return (
     <section className="flex flex-col gap-5 rounded-2xl border border-[#E0E3E8] bg-white p-6">
@@ -314,7 +333,11 @@ export default function BasicInfoSection({
                   value={value.external_url}
                   onChange={(e) => onChange({ external_url: e.target.value })}
                   placeholder="https://partner-agency.example.com/trip/12345"
-                  className="h-11 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none placeholder:text-[#B4BED1] focus:border-[#0053E0]"
+                  aria-invalid={externalUrlMissing || undefined}
+                  data-invalid={externalUrlMissing || undefined}
+                  className={`h-11 w-full rounded-xl border bg-[#FAFAFA] px-4 text-[15px] leading-[1.5em] text-[#0A0A0C] outline-none placeholder:text-[#B4BED1] ${
+                    externalUrlMissing ? "border-[#D92D20]" : "border-[#E0E3E8] focus:border-[#0053E0]"
+                  }`}
                 />
               </div>
               <div className="flex flex-1 flex-col gap-[7px]">
@@ -351,6 +374,19 @@ export default function BasicInfoSection({
         />
         <p className="text-xs leading-[1.4em] text-[#535F71]">
           此為頁面／SEO 標題，用於瀏覽器分頁與搜尋結果；封面大標題請至下方「01 封面設定」維護，前台卡片／集合頁顯示名稱請至下方「行程產品名稱」維護。
+        </p>
+      </div>
+
+      {/* 關鍵字 */}
+      <div className="flex flex-col gap-[7px]">
+        <span className="text-[13px] font-bold leading-[1.45em] text-[#002366]">關鍵字</span>
+        <KeywordTagInput
+          value={value.search_keywords}
+          onChange={(search_keywords) => onChange({ search_keywords })}
+          onDuplicate={(existing) => setNotice(`「${existing}」已存在`)}
+        />
+        <p className="text-xs leading-[1.4em] text-[#535F71]">
+          僅後台使用，不顯示於前台；用於站內搜尋比對，可補充行程產品名稱／說明文字未涵蓋的搜尋詞（例如：溫泉、親子、蜜月）。輸入後按 Enter 或點擊「＋新增」即可新增關鍵字，點擊既有標籤上的「×」可以刪除。
         </p>
       </div>
 
@@ -398,7 +434,7 @@ export default function BasicInfoSection({
           <div className="flex flex-1 flex-col gap-[7px]">
             <span className="text-sm font-bold leading-[1.45em] text-[#090909]">卡片 Badge</span>
             <AdminSelect
-              options={badgeOptions.map((o) => o.label)}
+              options={[...badgeOptions.map((o) => o.label), BADGE_NONE]}
               value={cardBadge}
               onChange={setCardBadge}
             />
@@ -435,9 +471,15 @@ export default function BasicInfoSection({
             </div>
             <ManagedChipList
               chips={themeOptions}
-              onRemove={notWired}
+              onRemove={(id) =>
+                setPendingRemoval({
+                  kind: "themes",
+                  id: Number(id),
+                  label: themeOptions.find((chip) => chip.id === id)?.label ?? "",
+                })
+              }
               addPlaceholder="輸入主題名稱"
-              onAdd={notWired}
+              onAdd={(label) => addOption("themes", label)}
             />
           </div>
 
@@ -492,9 +534,6 @@ export default function BasicInfoSection({
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="flex items-center rounded-[15px] border border-[#E0E3E8] bg-[#F7F9FB] px-3 py-1.5 text-[13px] font-medium leading-[1.45em] text-[#002366]">
-                  自動判斷
-                </span>
                 {badgeOptions.map((chip) => (
                   <div
                     key={chip.id}
@@ -688,8 +727,12 @@ export default function BasicInfoSection({
       {notice && <AdminToast message={notice} variant="warning" onClose={closeNotice} />}
       {pendingRemoval && (
         <AdminConfirmDialog
-          title={`移除${pendingRemoval.kind === "statuses" ? "行程狀態" : "卡片標章"}「${pendingRemoval.label}」？`}
-          message="按「儲存變更」後會從選項中移除，已套用此項目的行程也會一併清除。"
+          title={`移除${REMOVAL_NOUN[pendingRemoval.kind]}「${pendingRemoval.label}」？`}
+          message={
+            pendingRemoval.kind === "themes"
+              ? "按「儲存變更」後會從選項中移除；若仍有其他行程使用此主題，將無法移除。"
+              : "按「儲存變更」後會從選項中移除，已套用此項目的行程也會一併清除。"
+          }
           confirmLabel="移除"
           onConfirm={removeOption}
           onCancel={() => setPendingRemoval(null)}
